@@ -1,0 +1,689 @@
+[
+  {
+    "id": "a7729fa46d3815b2",
+    "type": "tab",
+    "label": "Grupo 1 - Telemetria de Borda",
+    "disabled": false,
+    "info": "Gateway de borda do Grupo 1 (Sprint 1).\nCLP S7-1200 → JSON → buffer offline → MQTTS 8883 → HiveMQ Cloud.\nVariáveis de ambiente: menu do fluxo (duplo clique na aba) → Environment Variables.",
+    "env": [
+      {
+        "name": "SIMULATE",
+        "value": "true",
+        "type": "str"
+      },
+      {
+        "name": "MACHINE_ID",
+        "value": "SMART-40-PLANTA-N2",
+        "type": "str"
+      },
+      {
+        "name": "HEARTBEAT_MS",
+        "value": "5000",
+        "type": "str"
+      },
+      {
+        "name": "BELT_NOMINAL_SPEED",
+        "value": "",
+        "type": "str"
+      },
+      {
+        "name": "BUFFER_STORE",
+        "value": "file",
+        "type": "str"
+      },
+      {
+        "name": "BUFFER_MAX",
+        "value": "50000",
+        "type": "str"
+      },
+      {
+        "name": "MQTT_TOPIC_DATA",
+        "value": "industria40/telemetry/data",
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "id": "965a24e21fa7c7d2",
+    "type": "comment",
+    "z": "a7729fa46d3815b2",
+    "name": "1) AQUISIÇÃO — CLP real (s7 in, 100 ms) ou simulador",
+    "info": "Com SIMULATE=true o fluxo ignora o CLP e usa o simulador.\nNa bancada: SIMULATE=false e confira IP/rack/slot no nó de endpoint.",
+    "x": 230,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "af53e5d94f92dd7c",
+    "type": "s7 in",
+    "z": "a7729fa46d3815b2",
+    "endpoint": "7342469a9f59c409",
+    "mode": "all",
+    "variable": "",
+    "diff": false,
+    "name": "CLP S7-1200 (leitura 100 ms)",
+    "x": 190,
+    "y": 100,
+    "wires": [
+      [
+        "7e693f93da7fac27"
+      ]
+    ]
+  },
+  {
+    "id": "41597414ef30ee6b",
+    "type": "inject",
+    "z": "a7729fa46d3815b2",
+    "name": "Clock 100 ms (simulador)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "0.1",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.5,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 180,
+    "y": 160,
+    "wires": [
+      [
+        "4582dc03e45d82ee"
+      ]
+    ]
+  },
+  {
+    "id": "5268f46c104539f6",
+    "type": "inject",
+    "z": "a7729fa46d3815b2",
+    "name": "SIM: botão START",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.5,
+    "topic": "sim_cmd",
+    "payload": "START",
+    "payloadType": "str",
+    "x": 160,
+    "y": 200,
+    "wires": [
+      [
+        "4582dc03e45d82ee"
+      ]
+    ]
+  },
+  {
+    "id": "bd80bad6b2899759",
+    "type": "inject",
+    "z": "a7729fa46d3815b2",
+    "name": "SIM: botão STOP",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.5,
+    "topic": "sim_cmd",
+    "payload": "STOP",
+    "payloadType": "str",
+    "x": 160,
+    "y": 240,
+    "wires": [
+      [
+        "4582dc03e45d82ee"
+      ]
+    ]
+  },
+  {
+    "id": "a59b2ff031846f2d",
+    "type": "inject",
+    "z": "a7729fa46d3815b2",
+    "name": "SIM: EMERGÊNCIA",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.5,
+    "topic": "sim_cmd",
+    "payload": "EMERGENCY",
+    "payloadType": "str",
+    "x": 160,
+    "y": 280,
+    "wires": [
+      [
+        "4582dc03e45d82ee"
+      ]
+    ]
+  },
+  {
+    "id": "3af1062f100bb1e8",
+    "type": "inject",
+    "z": "a7729fa46d3815b2",
+    "name": "SIM: RESET",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.5,
+    "topic": "sim_cmd",
+    "payload": "RESET",
+    "payloadType": "str",
+    "x": 150,
+    "y": 320,
+    "wires": [
+      [
+        "4582dc03e45d82ee"
+      ]
+    ]
+  },
+  {
+    "id": "4582dc03e45d82ee",
+    "type": "function",
+    "z": "a7729fa46d3815b2",
+    "name": "Simulador CLP S7-1200",
+    "func": "// =============================================================================\n// SIMULADOR DO CLP S7-1200 (para desenvolver sem a bancada)\n// Ativo somente se a variável de ambiente SIMULATE=true.\n// Gera um objeto com OS MESMOS NOMES de variáveis que o nó \"s7 in\" (modo \"all\")\n// produz, para que o restante do fluxo seja idêntico com ou sem CLP.\n// Comandos manuais: msg.topic = \"sim_cmd\", msg.payload = START | STOP | EMERGENCY | RESET\n// =============================================================================\nif (env.get(\"SIMULATE\") !== \"true\") { return null; }\n\nlet sim = context.get(\"sim\") || { running: false, emergency: false, pulse: null, pulseTicks: 0 };\n\nif (msg.topic === \"sim_cmd\") {\n    const cmd = String(msg.payload || \"\").toUpperCase();\n    if (cmd === \"START\" && !sim.emergency) { sim.running = true;  sim.pulse = \"START\"; }\n    if (cmd === \"STOP\")                    { sim.running = false; sim.pulse = \"STOP\"; }\n    if (cmd === \"EMERGENCY\")               { sim.running = false; sim.emergency = true; }\n    if (cmd === \"RESET\")                   { sim.emergency = false; }\n    sim.pulseTicks = 3;               // botão \"fica apertado\" por ~300 ms\n    context.set(\"sim\", sim);\n    node.status({ fill: \"blue\", shape: \"ring\", text: \"SIM: \" + cmd });\n    return null;                      // a próxima leitura (tick) já reflete o novo estado\n}\n\n// ---- tick de leitura (a cada 100 ms) ----\nconst green = sim.pulseTicks > 0 && sim.pulse === \"START\";\nconst red   = sim.pulseTicks > 0 && sim.pulse === \"STOP\";\nif (sim.pulseTicks > 0) { sim.pulseTicks--; }\ncontext.set(\"sim\", sim);\n\nconst belts = sim.running && !sim.emergency;\nconst station = (prefix) => ({\n    [prefix + \"_segurancaOK\"]: !sim.emergency,\n    [prefix + \"_chaveAutomatico\"]: true,\n    [prefix + \"_botaoVerde\"]: green,\n    [prefix + \"_botaoVermelho\"]: red,\n    [prefix + \"_esteira1\"]: belts,\n    [prefix + \"_esteira2\"]: belts\n});\n\nmsg.payload = Object.assign(\n    {\n        emergencia: sim.emergency,\n        emergenciaAtivada: sim.emergency,\n        ocupado: belts,\n        aguardando: !belts,\n        manual: false,\n        comutadorAutomatico: true,\n        condicaoIniciar: !sim.emergency,\n        numeroOP: 1\n    },\n    station(\"processo\"), station(\"montagem\"), station(\"expedicao\")\n);\nmsg.source = \"SIMULATOR\";\nnode.status({ fill: sim.emergency ? \"red\" : (belts ? \"green\" : \"grey\"), shape: \"dot\",\n              text: sim.emergency ? \"SIM: EMERGÊNCIA\" : (belts ? \"SIM: RODANDO\" : \"SIM: PARADO\") });\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 200,
+    "wires": [
+      [
+        "7e693f93da7fac27"
+      ]
+    ]
+  },
+  {
+    "id": "3423f0fe92a52e3a",
+    "type": "comment",
+    "z": "a7729fa46d3815b2",
+    "name": "2) FORMATAÇÃO JSON + report-by-exception",
+    "info": "",
+    "x": 700,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "7e693f93da7fac27",
+    "type": "function",
+    "z": "a7729fa46d3815b2",
+    "name": "Normaliza CLP → JSON",
+    "func": "// =============================================================================\n// NORMALIZAÇÃO: snapshot bruto do CLP  ->  JSON padrão de telemetria (Grupo 1)\n// Entrada : msg.payload = { emergencia: bool, processo_botaoVerde: bool, ... }\n// Saída   : msg.payload = objeto de telemetria (sem msg_id; é adicionado depois)\n// ATENÇÃO : a regra de \"machine_state\" abaixo é uma HIPÓTESE a validar na\n//           bancada (ver docs/mapeamento-clp.md).\n// =============================================================================\nconst simulate = env.get(\"SIMULATE\") === \"true\";\nconst source = msg.source || \"PLC\";\n// Em modo simulação, ignora leituras vindas do CLP real (e vice-versa).\nif (simulate && source !== \"SIMULATOR\") { return null; }\nif (!simulate && source === \"SIMULATOR\") { return null; }\n\nconst r = msg.payload || {};\nconst b = (k) => r[k] === true;                       // undefined/null -> false\nconst MACHINE_ID = env.get(\"MACHINE_ID\") || \"SMART-40-PLANTA-N2\";\nconst NOMINAL = parseFloat(env.get(\"BELT_NOMINAL_SPEED\")); // NaN se não definido\n\nconst st = (p) => ({\n    seguranca_ok: b(p + \"_segurancaOK\"),\n    automatico:   b(p + \"_chaveAutomatico\"),\n    botao_verde:  b(p + \"_botaoVerde\"),\n    botao_vermelho: b(p + \"_botaoVermelho\"),\n    esteira1:     b(p + \"_esteira1\"),\n    esteira2:     b(p + \"_esteira2\")\n});\nconst stations = { processo: st(\"processo\"), montagem: st(\"montagem\"), expedicao: st(\"expedicao\") };\nconst list = Object.values(stations);\n\nconst startPressed = list.some(s => s.botao_verde);\nconst stopPressed  = list.some(s => s.botao_vermelho);\nconst emergency    = b(\"emergencia\") || b(\"emergenciaAtivada\");\nconst beltRunning  = list.some(s => s.esteira1 || s.esteira2);\nconst safetyFault  = list.some(s => !s.seguranca_ok);\n\n// Mapeado para o ENUM machine_state do banco (STOPPED, RUNNING, PAUSED, EMERGENCY, ALARM)\nlet state;\nif (emergency)                       state = \"EMERGENCY\";\nelse if (safetyFault)                state = \"ALARM\";\nelse if (beltRunning || b(\"ocupado\")) state = \"RUNNING\";\nelse if (b(\"manual\"))                state = \"PAUSED\";\nelse                                 state = \"STOPPED\";\n\n// Não há registrador de velocidade no mapa atual do CLP: as esteiras são ON/OFF.\nlet beltSpeed = 0, speedSource = \"PLC_DIGITAL\";\nif (beltRunning) {\n    if (isNaN(NOMINAL)) { beltSpeed = null; speedSource = \"UNAVAILABLE\"; }\n    else                { beltSpeed = NOMINAL; speedSource = \"NOMINAL_CONFIG\"; }\n}\n\nmsg.payload = {\n    machine_id: MACHINE_ID,\n    timestamp: new Date().toISOString(),\n    source: source,\n    machine_state: state,\n    belt_running: beltRunning,\n    belt_speed: beltSpeed,\n    belt_speed_source: speedSource,\n    buttons: {\n        start_pressed: startPressed,\n        stop_pressed: stopPressed,\n        emergency_pressed: emergency,\n        reset_pressed: false            // não há botão Reset no mapa do CLP (pendente)\n    },\n    stations: stations,\n    flags: {\n        ocupado: b(\"ocupado\"),\n        aguardando: b(\"aguardando\"),\n        manual: b(\"manual\"),\n        comutador_automatico: b(\"comutadorAutomatico\"),\n        condicao_iniciar: b(\"condicaoIniciar\")\n    },\n    numero_op: (typeof r.numeroOP === \"number\") ? r.numeroOP : null\n};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 680,
+    "y": 100,
+    "wires": [
+      [
+        "27e22c1ddd08ec67"
+      ]
+    ]
+  },
+  {
+    "id": "27e22c1ddd08ec67",
+    "type": "function",
+    "z": "a7729fa46d3815b2",
+    "name": "Detecta mudança + heartbeat",
+    "func": "// =============================================================================\n// REPORT-BY-EXCEPTION: lê a cada 100 ms, mas só publica quando algo muda\n// (+ um HEARTBEAT periódico). Protege HiveMQ/Neon de milhares de linhas iguais.\n// Também carimba msg_id (chave de idempotência) e seq.\n// =============================================================================\nconst HEARTBEAT_MS = Number(env.get(\"HEARTBEAT_MS\") || 5000);\nconst p = msg.payload;\n\n// Assinatura do estado SEM o timestamp (senão tudo seria \"mudança\")\nconst sig = JSON.stringify([p.machine_state, p.belt_running, p.belt_speed, p.buttons,\n                            p.stations, p.flags, p.numero_op]);\nconst now = Date.now();\nconst lastSig  = context.get(\"lastSig\");\nconst lastSent = context.get(\"lastSent\") || 0;\n\nlet event;\nif (sig !== lastSig)                  event = \"STATE_CHANGE\";\nelse if (now - lastSent >= HEARTBEAT_MS) event = \"HEARTBEAT\";\nelse return null;                      // nada novo: descarta esta leitura\n\nconst seq = (context.get(\"seq\") || 0) + 1;\ncontext.set(\"seq\", seq);\ncontext.set(\"lastSig\", sig);\ncontext.set(\"lastSent\", now);\n\np.event = event;\np.seq = seq;\n// ID único e estável: o iot-service usa isto para NÃO duplicar após reconexão\np.msg_id = p.machine_id + \"-\" + now + \"-\" + seq + \"-\" + Math.random().toString(36).slice(2, 8);\np.buffered = false;\n\nflow.set(\"last_telemetry\", p);         // usado pelo endpoint local GET /edge/status\nmsg.topic = env.get(\"MQTT_TOPIC_DATA\") || \"industria40/telemetry/data\";\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 940,
+    "y": 100,
+    "wires": [
+      [
+        "052e66b060b8458e",
+        "a19e53796d44d67b"
+      ]
+    ]
+  },
+  {
+    "id": "a19e53796d44d67b",
+    "type": "debug",
+    "z": "a7729fa46d3815b2",
+    "name": "Telemetria publicada",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1180,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "acf944a83e4d4140",
+    "type": "comment",
+    "z": "a7729fa46d3815b2",
+    "name": "3) STORE-AND-FORWARD + MQTTS (TLS 8883)",
+    "info": "",
+    "x": 1230,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "052e66b060b8458e",
+    "type": "function",
+    "z": "a7729fa46d3815b2",
+    "name": "Buffer Store-and-Forward",
+    "func": "// =============================================================================\n// STORE-AND-FORWARD (buffer offline)\n// - Online e fila vazia  -> envia direto para o \"mqtt out\" (QoS 1)\n// - Offline (ou fila com pendências) -> guarda na fila persistente (contexto \"file\")\n// - Ao reconectar -> descarrega a fila em lotes, em ordem, marcando buffered=true\n// Entradas aceitas:\n//   * telemetria (msg.payload objeto)\n//   * msg.status  (vindo do nó \"status\" que observa o \"mqtt out\")\n//   * msg.topic \"__force_offline__\" / \"__force_online__\" (teste sem tirar o cabo)\n// =============================================================================\nconst STORE = env.get(\"BUFFER_STORE\") || \"file\";\nconst MAX   = Number(env.get(\"BUFFER_MAX\") || 50000);\nconst BATCH = Number(env.get(\"BUFFER_BATCH\") || 100);\nconst BATCH_INTERVAL_MS = 500;\n\nfunction isOnline() {\n    return flow.get(\"mqtt_online\") === true && flow.get(\"force_offline\") !== true;\n}\nfunction getQ() { return flow.get(\"sf_queue\", STORE) || []; }\nfunction setQ(q) { flow.set(\"sf_queue\", q, STORE); }\nfunction showStatus() {\n    const n = getQ().length;\n    node.status(isOnline()\n        ? { fill: n ? \"yellow\" : \"green\", shape: \"dot\", text: n ? \"online - descarregando \" + n : \"online\" }\n        : { fill: \"red\", shape: \"ring\", text: \"OFFLINE - \" + n + \" msg no buffer\" });\n}\nfunction flushChunk() {\n    if (!isOnline()) { context.set(\"flushing\", false); showStatus(); return; }\n    const q = getQ();\n    if (q.length === 0) { context.set(\"flushing\", false); showStatus(); return; }\n    const chunk = q.splice(0, BATCH);\n    setQ(q);\n    chunk.forEach(function (item) {\n        item.payload.buffered = true;\n        node.send({ topic: item.topic, payload: item.payload, qos: 1, retain: false });\n    });\n    showStatus();\n    setTimeout(flushChunk, BATCH_INTERVAL_MS);\n}\nfunction startFlush() {\n    if (context.get(\"flushing\") === true) return;\n    context.set(\"flushing\", true);\n    flushChunk();\n}\n\n// ---- 1) Mudança de status da conexão MQTT ----\nif (msg.status) {\n    const wasOnline = isOnline();\n    flow.set(\"mqtt_online\", msg.status.fill === \"green\");\n    if (!wasOnline && isOnline()) {\n        node.warn(\"MQTT reconectado. Itens no buffer: \" + getQ().length);\n        startFlush();\n    }\n    showStatus();\n    return null;\n}\n// ---- 2) Comandos de teste ----\nif (msg.topic === \"__force_offline__\") { flow.set(\"force_offline\", true);  showStatus(); return null; }\nif (msg.topic === \"__force_online__\")  { flow.set(\"force_offline\", false); startFlush(); showStatus(); return null; }\n\n// ---- 3) Telemetria ----\nconst item = { topic: msg.topic, payload: msg.payload };\nconst q = getQ();\nif (isOnline() && q.length === 0) {\n    showStatus();\n    return { topic: item.topic, payload: item.payload, qos: 1, retain: false };\n}\nq.push(item);\nif (q.length > MAX) {\n    q.splice(0, q.length - MAX);      // descarta as mais antigas\n    node.warn(\"Buffer cheio (\" + MAX + \"). Descartando mensagens mais antigas.\");\n}\nsetQ(q);\nif (isOnline()) startFlush();          // online, mas ainda havia pendências: mantém a ordem\nshowStatus();\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1200,
+    "y": 220,
+    "wires": [
+      [
+        "61cb7165ee59e7ca"
+      ]
+    ]
+  },
+  {
+    "id": "61cb7165ee59e7ca",
+    "type": "mqtt out",
+    "z": "a7729fa46d3815b2",
+    "name": "MQTTS → HiveMQ Cloud",
+    "topic": "",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "3b078d58062f239a",
+    "x": 1460,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "dae18ee03afcbea2",
+    "type": "status",
+    "z": "a7729fa46d3815b2",
+    "name": "Estado conexão MQTT",
+    "scope": [
+      "61cb7165ee59e7ca"
+    ],
+    "x": 950,
+    "y": 280,
+    "wires": [
+      [
+        "052e66b060b8458e"
+      ]
+    ]
+  },
+  {
+    "id": "c4e6fb1bdf2e7808",
+    "type": "inject",
+    "z": "a7729fa46d3815b2",
+    "name": "TESTE: forçar OFFLINE",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.5,
+    "topic": "__force_offline__",
+    "payload": "",
+    "payloadType": "str",
+    "x": 960,
+    "y": 340,
+    "wires": [
+      [
+        "052e66b060b8458e"
+      ]
+    ]
+  },
+  {
+    "id": "fe36232fa3530985",
+    "type": "inject",
+    "z": "a7729fa46d3815b2",
+    "name": "TESTE: voltar ONLINE",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.5,
+    "topic": "__force_online__",
+    "payload": "",
+    "payloadType": "str",
+    "x": 960,
+    "y": 380,
+    "wires": [
+      [
+        "052e66b060b8458e"
+      ]
+    ]
+  },
+  {
+    "id": "7718312b58850108",
+    "type": "comment",
+    "z": "a7729fa46d3815b2",
+    "name": "4) Diagnóstico local (http://localhost:1880/edge/status)",
+    "info": "",
+    "x": 250,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "e58bf92d0af2b9a4",
+    "type": "http in",
+    "z": "a7729fa46d3815b2",
+    "name": "GET /edge/status",
+    "url": "/edge/status",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 470,
+    "wires": [
+      [
+        "f16be0e032723c98"
+      ]
+    ]
+  },
+  {
+    "id": "f16be0e032723c98",
+    "type": "function",
+    "z": "a7729fa46d3815b2",
+    "name": "Status do gateway",
+    "func": "// GET /edge/status  -> diagnóstico LOCAL do gateway (não é a API da nuvem)\nmsg.payload = {\n    mqtt_online: flow.get(\"mqtt_online\") === true,\n    forced_offline: flow.get(\"force_offline\") === true,\n    buffer_size: (flow.get(\"sf_queue\", env.get(\"BUFFER_STORE\") || \"file\") || []).length,\n    simulate: env.get(\"SIMULATE\") === \"true\",\n    last_telemetry: flow.get(\"last_telemetry\") || null\n};\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.statusCode = 200;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 470,
+    "wires": [
+      [
+        "da1d4de2813dbb13"
+      ]
+    ]
+  },
+  {
+    "id": "da1d4de2813dbb13",
+    "type": "http response",
+    "z": "a7729fa46d3815b2",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 570,
+    "y": 470,
+    "wires": []
+  },
+  {
+    "id": "5eddc87864a2f401",
+    "type": "catch",
+    "z": "a7729fa46d3815b2",
+    "name": "Erros do fluxo",
+    "scope": null,
+    "uncaught": false,
+    "x": 150,
+    "y": 540,
+    "wires": [
+      [
+        "3e3e948c2c3e0040"
+      ]
+    ]
+  },
+  {
+    "id": "3e3e948c2c3e0040",
+    "type": "debug",
+    "z": "a7729fa46d3815b2",
+    "name": "Log de erros",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 370,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "7342469a9f59c409",
+    "type": "s7 endpoint",
+    "transport": "iso-on-tcp",
+    "address": "192.168.150.10",
+    "port": "102",
+    "rack": "0",
+    "slot": "1",
+    "localtsaphi": "01",
+    "localtsaplo": "00",
+    "remotetsaphi": "01",
+    "remotetsaplo": "00",
+    "connmode": "rack-slot",
+    "adapter": "",
+    "busaddr": "2",
+    "cycletime": "100",
+    "timeout": "2000",
+    "name": "SMART 4.0 - S7-1200 (somente leitura)",
+    "vartable": [
+      {
+        "addr": "DB9,X100.3",
+        "name": "emergencia"
+      },
+      {
+        "addr": "DB9,X110.0",
+        "name": "emergenciaAtivada"
+      },
+      {
+        "addr": "DB9,X100.0",
+        "name": "ocupado"
+      },
+      {
+        "addr": "DB9,X100.1",
+        "name": "aguardando"
+      },
+      {
+        "addr": "DB9,X100.2",
+        "name": "manual"
+      },
+      {
+        "addr": "DB9,X110.1",
+        "name": "comutadorAutomatico"
+      },
+      {
+        "addr": "DB9,X110.6",
+        "name": "condicaoIniciar"
+      },
+      {
+        "addr": "DB9,I96",
+        "name": "numeroOP"
+      },
+      {
+        "addr": "DB101,X0.1",
+        "name": "processo_segurancaOK"
+      },
+      {
+        "addr": "DB101,X0.6",
+        "name": "processo_chaveAutomatico"
+      },
+      {
+        "addr": "DB101,X0.7",
+        "name": "processo_botaoVerde"
+      },
+      {
+        "addr": "DB101,X1.0",
+        "name": "processo_botaoVermelho"
+      },
+      {
+        "addr": "DB101,X20.3",
+        "name": "processo_esteira1"
+      },
+      {
+        "addr": "DB101,X20.4",
+        "name": "processo_esteira2"
+      },
+      {
+        "addr": "DB102,X0.1",
+        "name": "montagem_segurancaOK"
+      },
+      {
+        "addr": "DB102,X6.5",
+        "name": "montagem_chaveAutomatico"
+      },
+      {
+        "addr": "DB102,X6.6",
+        "name": "montagem_botaoVerde"
+      },
+      {
+        "addr": "DB102,X6.7",
+        "name": "montagem_botaoVermelho"
+      },
+      {
+        "addr": "DB102,X30.3",
+        "name": "montagem_esteira1"
+      },
+      {
+        "addr": "DB102,X30.4",
+        "name": "montagem_esteira2"
+      },
+      {
+        "addr": "DB103,X0.1",
+        "name": "expedicao_segurancaOK"
+      },
+      {
+        "addr": "DB103,X0.5",
+        "name": "expedicao_chaveAutomatico"
+      },
+      {
+        "addr": "DB103,X0.6",
+        "name": "expedicao_botaoVerde"
+      },
+      {
+        "addr": "DB103,X0.7",
+        "name": "expedicao_botaoVermelho"
+      },
+      {
+        "addr": "DB103,X20.2",
+        "name": "expedicao_esteira1"
+      },
+      {
+        "addr": "DB103,X20.3",
+        "name": "expedicao_esteira2"
+      }
+    ]
+  },
+  {
+    "id": "b01a9e4aa4cddfaa",
+    "type": "tls-config",
+    "name": "TLS HiveMQ Cloud",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "servername": "",
+    "verifyservercert": true,
+    "alpnprotocol": ""
+  },
+  {
+    "id": "3b078d58062f239a",
+    "type": "mqtt-broker",
+    "name": "HiveMQ Cloud (MQTTS 8883)",
+    "broker": "SEU-CLUSTER.s1.eu.hivemq.cloud",
+    "port": "8883",
+    "tls": "b01a9e4aa4cddfaa",
+    "clientid": "smart40-edge-grupo1",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "30",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "industria40/edge/status",
+    "birthQos": "1",
+    "birthRetain": "true",
+    "birthPayload": "{\"status\":\"ONLINE\",\"machine_id\":\"SMART-40-PLANTA-N2\"}",
+    "birthMsg": {},
+    "closeTopic": "industria40/edge/status",
+    "closeQos": "1",
+    "closeRetain": "true",
+    "closePayload": "{\"status\":\"OFFLINE\",\"machine_id\":\"SMART-40-PLANTA-N2\"}",
+    "closeMsg": {},
+    "willTopic": "industria40/edge/status",
+    "willQos": "1",
+    "willRetain": "true",
+    "willPayload": "{\"status\":\"OFFLINE\",\"machine_id\":\"SMART-40-PLANTA-N2\"}",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

@@ -1,0 +1,9 @@
+.env
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
+node_modules/
+flows_cred.json
+.config.*.json
+context/

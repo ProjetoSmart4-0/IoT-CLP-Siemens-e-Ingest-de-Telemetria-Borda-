@@ -1,0 +1,52 @@
+# Ambiente local do Grupo 1:  docker compose up -d --build
+#   Node-RED .......... http://localhost:1880   (importe node-red/node-red-flow-grupo1.json)
+#   iot-service ....... http://localhost:8080/docs
+#   Postgres .......... localhost:5432  (admin_40 / senha_segura_40)
+#   Mosquitto (teste).. localhost:1883  -> docker compose --profile broker-local up -d
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_DB: industria40_db
+      POSTGRES_USER: admin_40
+      POSTGRES_PASSWORD: senha_segura_40
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # executados em ordem alfabética só na PRIMEIRA criação do volume
+      - ./db/init-db-industria40.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
+      - ./db/001_telemetry_msg_id.sql:/docker-entrypoint-initdb.d/02-telemetry-msg-id.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_40 -d industria40_db"]
+      interval: 5s
+      retries: 10
+
+  iot-service:
+    build: ./iot-service
+    env_file: ./iot-service/.env
+    environment:
+      DATABASE_URL: postgresql://admin_40:senha_segura_40@postgres:5432/industria40_db
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  nodered:
+    build: ./node-red
+    environment:
+      TZ: America/Sao_Paulo
+      NODE_RED_CREDENTIAL_SECRET: troque-esta-chave-grupo1
+    ports: ["1880:1880"]
+    volumes:
+      - nodered_data:/data
+      - ./node-red/settings.js:/data/settings.js:ro
+
+  mosquitto:
+    profiles: ["broker-local"]
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+volumes:
+  pgdata:
+  nodered_data:
