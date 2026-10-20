@@ -105,6 +105,13 @@ def test_payload_invalido_rejeitado(client):
     assert r.status_code == 422
 
 
+def test_versao_de_contrato_incompativel_rejeitada(client):
+    r = client.post("/api/v1/telemetry/ingest", json=msg("m-00000001", schema_version="2.0"), headers=EDGE)
+    assert r.status_code == 422
+    r = client.post("/api/v1/telemetry/ingest", json=msg("m-00000002", schema_version="1.1"), headers=EDGE)
+    assert r.status_code == 200
+
+
 def test_campos_extras_preservados_no_raw_payload(client):
     client.post("/api/v1/telemetry/ingest", json=msg("m-00000001"), headers=EDGE)
     assert client.app.state.repo.rows[0]["raw_payload"]["stations"]["processo"]["esteira1"] is True

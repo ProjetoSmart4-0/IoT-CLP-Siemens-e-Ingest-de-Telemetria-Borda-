@@ -13,34 +13,52 @@ CLP S7-1200 ──S7/100ms──► Node-RED ──JSON──► Buffer offline 
 ## Estrutura
 
 ```
-grupo1-iot/
+.
 ├── node-red/
-│   ├── node-red-flow-grupo1.json   ← fluxo para importar no Node-RED (itens 1, 2 e 3)
-│   ├── settings.js                 ← habilita o buffer persistente em disco
-│   ├── Dockerfile                  ← Node-RED + node-red-contrib-s7
-│   └── tests/edge-logic.test.js    ← testa a lógica do fluxo sem CLP/internet
-├── iot-service/                    ← microsserviço FastAPI para o Cloud Run (item 4)
-│   ├── app.py
-│   ├── requirements.txt · requirements-dev.txt · Dockerfile · .env.example
-│   └── tests/test_app.py
-├── db/
-│   ├── init-db-industria40.sql     ← cópia do arquivo do professor (dono: Grupo 3)
-│   └── 001_telemetry_msg_id.sql    ← proposta ao Grupo 3: evitar duplicatas
+│   ├── node-red-flow-grupo1.json          ← fluxo principal (S7 100 ms → JSON → buffer → MQTTS)
+│   ├── node-red-flow-diagnostico-s7.json  ← diagnóstico ISOLADO da bancada (vem desativado)
+│   ├── settings.js · Dockerfile
+│   └── tests/edge-logic.test.js
+├── iot-service/                           ← microsserviço FastAPI (app.py, testes, Dockerfile)
+├── contracts/events/asyncapi-telemetria-grupo1.yaml   ← contrato MQTT versionado
+├── db/                                    ← DDL do professor (dono: G3) + proposta 001
 ├── docs/
-│   ├── mapeamento-clp.md           ← item 1: registradores + roteiro de validação
-│   └── contrato-e-divergencias.md  ← tópicos, payload, rotas e problemas nos arquivos-base
+│   ├── mapeamento-clp.md                  ← registradores, regra de estado, roteiro de bancada
+│   ├── tags/tabela-tags-grupo1.csv        ← planilha de confirmação de tags (formato do runbook)
+│   ├── decisions/G1-decisoes-sprint1.md   ← decisões + parecer sobre o OpenAPI
+│   ├── contrato-e-divergencias.md
+│   └── evidence/sprint1/                  ← evidências (PASS / LIMITATION / BLOCKED)
+├── tools/gerar-evidencias.js              ← gera a evidência automática
 └── docker-compose.yml
 ```
 
-## Correspondência com as tarefas da Sprint 1
+## Correspondência com a Sprint 1
 
-| Tarefa | Onde está |
+| Tarefa (lista do grupo / runbook) | Onde está | Status atual |
+|---|---|---|
+| 1. Mapeamento do CLP / tabela de tags | `docs/tags/tabela-tags-grupo1.csv`, `docs/mapeamento-clp.md` | A CONFIRMAR na bancada |
+| 2. Nó S7 a cada 100 ms → JSON | fluxo principal | PASS WITH LIMITATION (simulador) |
+| 3. Store-and-Forward → MQTTS 8883 | fluxo principal | PASS WITH LIMITATION (simulador) |
+| 4. `iot-service` gravando no SQL | `iot-service/` | Código e testes prontos; deploy fica para a Sprint 2 |
+| 5. Validar no notebook (NotebookLM) | ver seção no final | — |
+| Runbook: fluxo de diagnóstico somente leitura | `node-red/node-red-flow-diagnostico-s7.json` | Pronto, desativado |
+| Runbook: contrato MQTT versionado | `contracts/events/` | Candidato v1.0.0-rc1 |
+| Runbook: decisões e revisão do OpenAPI | `docs/decisions/` | Proposto |
+| Runbook: evidências | `docs/evidence/sprint1/` | BLOCKED (hardware) |
+
+**Limites da Sprint 1 (runbook):** somente leitura do CLP, sem acionamento físico, sem deploy de produção e sem DDL
+em banco produtivo. Sem acesso ao CLP, o status do grupo é **PASS WITH LIMITATION (mock apenas)**, nunca "CLP validado".
+
+## Versões de referência
+
+| Componente | Versão testada |
 |---|---|
-| 1. Mapeamento do CLP | `docs/mapeamento-clp.md` + nó `s7 endpoint` do fluxo |
-| 2. Nó S7 a cada 100 ms → JSON | nós "CLP S7-1200 (leitura 100 ms)" e "Normaliza CLP → JSON" |
-| 3. Store-and-Forward → MQTTS 8883 | nós "Buffer Store-and-Forward" + "MQTTS → HiveMQ Cloud" |
-| 4. `iot-service` gravando no SQL | `iot-service/app.py` |
-| 5. Validar no notebook (NotebookLM) | ver seção no final |
+| Node-RED | 4.x / 5.x |
+| node-red-contrib-s7 | 3.1.3 |
+| Node.js | 20 LTS ou 22 LTS |
+| Python | 3.12 |
+
+As versões **reais** do PC de vocês ficam registradas em `docs/evidence/sprint1/G1-auto-*.md` (`node tools/gerar-evidencias.js`).
 
 ---
 
@@ -94,7 +112,7 @@ cd iot-service
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 cp .env.example .env        # preencha DATABASE_URL (Neon), JWT_SECRET, INGEST_API_KEY e MQTT_*
-pytest -v                   # 16 testes, não precisam de banco
+pytest -v                   # 17 testes, não precisam de banco
 uvicorn app:app --reload --port 8080
 ```
 
@@ -107,7 +125,10 @@ O banco precisa ter o `init-db-industria40.sql` aplicado (Grupo 3). Recomendamos
 psql "$DATABASE_URL" -f db/001_telemetry_msg_id.sql
 ```
 
-### Deploy no Cloud Run
+### Deploy no Cloud Run (Sprint 2 — fora do escopo do Marco 1)
+
+O runbook da Sprint 1 não inclui deploy. Os comandos ficam aqui para quando a turma liberar.
+
 
 ```bash
 cd iot-service
@@ -134,16 +155,35 @@ node node-red/tests/edge-logic.test.js       # lógica do fluxo (simulador, JSON
 cd iot-service && pytest -v                  # API, RBAC, deduplicação
 ```
 
+Também foi verificado que os payloads gerados pelo fluxo passam no schema do contrato AsyncAPI.
 O protótipo também foi validado ponta a ponta (Node-RED real → broker → iot-service → PostgreSQL com o
 DDL do professor), com queda do broker no meio: as 14 mensagens chegaram em sequência, sem buracos e sem
 duplicatas. Os 3 testes do Grupo 1 em `test_integration.py` do professor passam contra o serviço.
 
+## Gerar evidências da Sprint 1
+
+```bash
+node tools/gerar-evidencias.js
+```
+
+Gera `docs/evidence/sprint1/G1-auto-AAAA-MM-DD.md` com versões, resultado dos testes e duas checagens de segurança:
+nenhum nó de escrita no CLP e nenhum segredo versionado. Termina com código de erro se algo falhar.
+
 ## Levando para a bancada
 
-1. Notebook na rede `192.168.150.x` do laboratório.
+**Primeiro o diagnóstico isolado**, depois o fluxo principal:
+
+1. Importar `node-red/node-red-flow-diagnostico-s7.json` (aba "G1 - Diagnóstico S7", vem desativada).
+2. Seguir `docs/evidence/sprint1/G1-sessao-bancada-TEMPLATE.md`: teste de porta 102, ativar a aba, **LER SNAPSHOT AGORA**,
+   baixar `http://localhost:1880/diag/s7.csv` e comparar com a watch table do TIA.
+3. Desativar a aba de diagnóstico ao terminar.
+
+Depois, no fluxo principal:
+
+
+1. Notebook na rede `192.168.150.x` do laboratório, com autorização do responsável.
 2. Na aba do fluxo: `SIMULATE = false` → Deploy.
-3. Seguir o roteiro de `docs/mapeamento-clp.md` e marcar a coluna "Validado".
-4. Se aparecer erro de timeout no nó S7, suba o ciclo de 100 para 200 ms (é o valor usado pelo fluxo da bancada).
+3. Se aparecer erro de timeout no nó S7, suba o ciclo de 100 para 200 ms (é o valor usado pelo fluxo da bancada).
 
 **Segurança:** este fluxo apenas **lê** o CLP. Comandos remotos (Start/Stop pela web) ficam para a
 Sprint 3 e nunca substituem a emergência física.
@@ -151,7 +191,8 @@ Sprint 3 e nunca substituem a emergência física.
 ## Item 5 — Validar no notebook (NotebookLM)
 
 Envie para o Google Drive e adicione como fontes: `node-red/node-red-flow-grupo1.json`,
-`iot-service/app.py` e os dois arquivos de `docs/`. Se a plataforma recusar `.json` ou `.py`,
+`iot-service/app.py`, `contracts/events/asyncapi-telemetria-grupo1.yaml`, `docs/mapeamento-clp.md`
+e `docs/decisions/G1-decisoes-sprint1.md`. Se a plataforma recusar `.json` ou `.py`,
 renomeie a cópia para `.txt`.
 
 ## Pendências com o professor e outros grupos

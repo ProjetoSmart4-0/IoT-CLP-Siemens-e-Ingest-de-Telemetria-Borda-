@@ -1,6 +1,7 @@
 # Mapeamento do CLP Siemens S7-1200 — Grupo 1 (Sprint 1, item 1)
 
 Fonte: tabela de variáveis do `flows.json` que já roda na bancada (aba **ESTOQUE**), nó `s7 endpoint`.
+**Planilha de confirmação (formato do runbook): `docs/tags/tabela-tags-grupo1.csv`.**
 Os endereços abaixo **existem no CLP**; o que precisa ser validado na bancada é o **significado**
 de cada bit (coluna "Validado").
 
@@ -31,6 +32,8 @@ Pré-requisitos no TIA Portal (provavelmente já feitos, pois o fluxo da bancada
 | **Esteira 1 / 2 – Processo** | `processo_esteira1/2` | `DB101,X20.3` / `X20.4` | Bool | ☐ |
 | **Esteira 1 / 2 – Montagem** | `montagem_esteira1/2` | `DB102,X30.3` / `X30.4` | Bool | ☐ |
 | **Esteira 1 / 2 – Expedição** | `expedicao_esteira1/2` | `DB103,X20.2` / `X20.3` | Bool | ☐ |
+| **Segurança OK** (por estação, ≠ emergência) | `processo/montagem/expedicao_segurancaOK` | `DB101,X0.1` · `DB102,X0.1` · `DB103,X0.1` | Bool | ☐ |
+| **Presença de peça** (stopper) | `montagem_pecaStopper` / `expedicao_pecaStopper` | `DB102,X7.0` / `DB103,X6.0` | Bool | ☐ |
 | **Velocidade da esteira** | — | **NÃO EXISTE no mapa** | — | ☐ |
 | **Reset** | — | **NÃO EXISTE no mapa** | — | ☐ |
 
@@ -38,7 +41,6 @@ Pré-requisitos no TIA Portal (provavelmente já feitos, pois o fluxo da bancada
 
 | Variável | Endereço | Uso no JSON |
 |---|---|---|
-| `processo/montagem/expedicao_segurancaOK` | `DB101,X0.1` · `DB102,X0.1` · `DB103,X0.1` | `stations.*.seguranca_ok` → estado `ALARM` |
 | `processo/montagem/expedicao_chaveAutomatico` | `DB101,X0.6` · `DB102,X6.5` · `DB103,X0.5` | `stations.*.automatico` |
 | `ocupado` / `aguardando` / `manual` | `DB9,X100.0` / `X100.1` / `X100.2` | `flags.*` |
 | `comutadorAutomatico` / `condicaoIniciar` | `DB9,X110.1` / `X110.6` | `flags.*` |
@@ -68,13 +70,19 @@ Mapeada para o ENUM do banco (`STOPPED, RUNNING, PAUSED, EMERGENCY, ALARM`), em 
 Se a bancada mostrar outro comportamento (ex.: `segurancaOK` fica falso com a estação desligada),
 ajustar no nó **"Normaliza CLP → JSON"**.
 
-## Roteiro de validação na bancada (≈30 min)
+## Roteiro de validação na bancada
 
-1. No Node-RED, aba do Grupo 1 → duplo clique na aba → `SIMULATE = false` → Deploy.
-2. Abrir `http://localhost:1880/edge/status` (ou ativar o debug "Telemetria publicada").
-3. Apertar cada botão e conferir se o campo correspondente muda; marcar ☑ na tabela acima.
-4. Ligar/desligar a esteira pela IHM física e conferir `belt_running` e `stations.*.esteiraN`.
-5. Acionar a emergência e conferir `machine_state = EMERGENCY` (e voltar ao normal após reset físico).
+Use o fluxo isolado `node-red/node-red-flow-diagnostico-s7.json` (vem **desativado**, leitura sob demanda, ciclo de 1 s)
+e o formulário `docs/evidence/sprint1/G1-sessao-bancada-TEMPLATE.md`. Resumo:
+
+1. `Test-NetConnection 192.168.150.10 -Port 102` (Windows) ou `nc -vz 192.168.150.10 102`.
+2. Ativar a aba "G1 - Diagnóstico S7" → Deploy → **LER SNAPSHOT AGORA**.
+3. Baixar `http://localhost:1880/diag/s7.csv` e comparar cada valor com a watch table do TIA.
+4. Apertar cada botão (só ações autorizadas) e confirmar o significado.
+5. Atualizar a planilha de tags e **desativar** a aba ao terminar.
+
+Se não houver acesso ou autorização: status **BLOCKED** (ver `docs/evidence/sprint1/G1-bloqueio-hardware.md`).
+Se PUT/GET ou "Optimized block access" não estiverem configurados, **não alterar a CPU**: registrar BLOCKED.
 
 **Segurança:** o fluxo do Grupo 1 é **somente leitura** (não há nenhum nó `s7 out`). Não acrescentar
 escrita no CLP nesta sprint. A emergência física continua atuando direto no hardware.

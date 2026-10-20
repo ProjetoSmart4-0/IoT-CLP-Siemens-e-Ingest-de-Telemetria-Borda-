@@ -1,0 +1,434 @@
+[
+  {
+    "id": "9ca85083ce77b919",
+    "type": "tab",
+    "label": "G1 - Diagnóstico S7 (somente leitura)",
+    "disabled": true,
+    "info": "Fluxo ISOLADO de diagnóstico (runbook Sprint 1, Grupo 1).\nVem DESATIVADO. Ative só na bancada, com autorização do responsável da automação.\nSomente leitura: não há nenhum nó s7 out.\nDesative de novo ao terminar."
+  },
+  {
+    "id": "4cd68b4cbd16f2c7",
+    "type": "comment",
+    "z": "9ca85083ce77b919",
+    "name": "⚠ SOMENTE LEITURA • ativar só na bancada autorizada • desativar ao terminar",
+    "info": "1. Duplo clique na aba > Enabled > Deploy.\n2. Clique em LER SNAPSHOT AGORA.\n3. Abra http://localhost:1880/diag/s7.csv e salve em docs/evidence/sprint1/.\n4. Compare cada valor com a watch table do TIA Portal (coluna valor_tia).\n5. Desative a aba e faça Deploy.",
+    "x": 360,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "6994a4752a3b7180",
+    "type": "s7 in",
+    "z": "9ca85083ce77b919",
+    "endpoint": "bf72129acd28ed53",
+    "mode": "all",
+    "variable": "",
+    "diff": false,
+    "name": "DIAG CLP (ciclo lento 1 s)",
+    "x": 170,
+    "y": 120,
+    "wires": [
+      [
+        "dd155831824c6968"
+      ]
+    ]
+  },
+  {
+    "id": "331840844dbfb85e",
+    "type": "inject",
+    "z": "9ca85083ce77b919",
+    "name": "LER SNAPSHOT AGORA",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "arm",
+    "payload": "",
+    "payloadType": "date",
+    "x": 170,
+    "y": 180,
+    "wires": [
+      [
+        "dd155831824c6968"
+      ]
+    ]
+  },
+  {
+    "id": "dd155831824c6968",
+    "type": "function",
+    "z": "9ca85083ce77b919",
+    "name": "Gate: leitura sob demanda",
+    "func": "// =============================================================================\n// GATE — LEITURA SOB DEMANDA (runbook Sprint 1, Grupo 1, passo 3)\n// O endpoint lê em ciclo lento, mas só deixamos passar UMA leitura\n// quando alguém clica em \"LER SNAPSHOT AGORA\". Nada é escrito no CLP.\n// =============================================================================\nconst TIMEOUT_MS = 5000;\n\nif (msg.topic === \"arm\") {\n    context.set(\"armed\", true);\n    node.status({ fill: \"yellow\", shape: \"ring\", text: \"aguardando leitura do CLP...\" });\n    const armedAt = Date.now();\n    context.set(\"armedAt\", armedAt);\n    setTimeout(function () {\n        if (context.get(\"armed\") === true && context.get(\"armedAt\") === armedAt) {\n            context.set(\"armed\", false);\n            node.status({ fill: \"red\", shape: \"dot\", text: \"sem leitura em 5 s — ver conexão\" });\n            node.warn(\"Nenhuma leitura do CLP em \" + TIMEOUT_MS / 1000 + \" s. Verifique IP, cabo, rede e o status do nó s7 in.\");\n        }\n    }, TIMEOUT_MS);\n    return null;\n}\n\nif (context.get(\"armed\") !== true) { return null; }   // leitura cíclica descartada\ncontext.set(\"armed\", false);\nmsg.source = \"PLC\";\nnode.status({ fill: \"green\", shape: \"dot\", text: \"leitura capturada \" + new Date().toLocaleTimeString() });\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 140,
+    "wires": [
+      [
+        "b37f1bb8f87191af"
+      ]
+    ]
+  },
+  {
+    "id": "b37f1bb8f87191af",
+    "type": "function",
+    "z": "9ca85083ce77b919",
+    "name": "Monta tabela de evidência",
+    "func": "// =============================================================================\n// MONTA A TABELA DE EVIDÊNCIA: sinal | símbolo | endereço | tipo | valor lido\n// Para comparar com a watch table do TIA Portal (runbook, passo 5).\n// =============================================================================\nconst tags = flow.get(\"diag_tags\") || [];\nconst raw = msg.payload || {};\nconst rows = tags.map(function (t) {\n    const has = Object.prototype.hasOwnProperty.call(raw, t.symbol);\n    return {\n        sinal: t.signal, simbolo: t.symbol, endereco: t.addr, tipo: t.type,\n        valor_lido: has ? raw[t.symbol] : null,\n        lido: has\n    };\n});\nconst snap = {\n    captured_at: new Date().toISOString(),\n    source: msg.source,\n    valid_for_plc_validation: msg.source === \"PLC\",\n    endpoint_status: flow.get(\"diag_conn\") || \"desconhecido\",\n    tags_esperadas: rows.length,\n    tags_lidas: rows.filter(r => r.lido).length,\n    rows: rows\n};\nflow.set(\"last_diag\", snap);\nmsg.payload = snap;\nnode.status({ fill: snap.source === \"PLC\" ? \"green\" : \"blue\", shape: \"dot\",\n              text: snap.source + \": \" + snap.tags_lidas + \"/\" + snap.tags_esperadas + \" tags\" });\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "// Lista oficial de tags do diagnóstico (mesma do endpoint)\nflow.set(\"diag_tags\", [\n {\n  \"signal\": \"E-Stop (emergência)\",\n  \"symbol\": \"emergencia\",\n  \"addr\": \"DB9,X100.3\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"E-Stop ativada/travada\",\n  \"symbol\": \"emergenciaAtivada\",\n  \"addr\": \"DB9,X110.0\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Start – Processo\",\n  \"symbol\": \"processo_botaoVerde\",\n  \"addr\": \"DB101,X0.7\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Start – Montagem\",\n  \"symbol\": \"montagem_botaoVerde\",\n  \"addr\": \"DB102,X6.6\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Start – Expedição\",\n  \"symbol\": \"expedicao_botaoVerde\",\n  \"addr\": \"DB103,X0.6\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Stop – Processo\",\n  \"symbol\": \"processo_botaoVermelho\",\n  \"addr\": \"DB101,X1.0\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Stop – Montagem\",\n  \"symbol\": \"montagem_botaoVermelho\",\n  \"addr\": \"DB102,X6.7\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Stop – Expedição\",\n  \"symbol\": \"expedicao_botaoVermelho\",\n  \"addr\": \"DB103,X0.7\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Segurança OK – Processo\",\n  \"symbol\": \"processo_segurancaOK\",\n  \"addr\": \"DB101,X0.1\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Segurança OK – Montagem\",\n  \"symbol\": \"montagem_segurancaOK\",\n  \"addr\": \"DB102,X0.1\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Segurança OK – Expedição\",\n  \"symbol\": \"expedicao_segurancaOK\",\n  \"addr\": \"DB103,X0.1\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Chave automático – Processo\",\n  \"symbol\": \"processo_chaveAutomatico\",\n  \"addr\": \"DB101,X0.6\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Chave automático – Montagem\",\n  \"symbol\": \"montagem_chaveAutomatico\",\n  \"addr\": \"DB102,X6.5\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Chave automático – Expedição\",\n  \"symbol\": \"expedicao_chaveAutomatico\",\n  \"addr\": \"DB103,X0.5\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Esteira 1 – Processo\",\n  \"symbol\": \"processo_esteira1\",\n  \"addr\": \"DB101,X20.3\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Esteira 2 – Processo\",\n  \"symbol\": \"processo_esteira2\",\n  \"addr\": \"DB101,X20.4\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Esteira 1 – Montagem\",\n  \"symbol\": \"montagem_esteira1\",\n  \"addr\": \"DB102,X30.3\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Esteira 2 – Montagem\",\n  \"symbol\": \"montagem_esteira2\",\n  \"addr\": \"DB102,X30.4\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Esteira 1 – Expedição\",\n  \"symbol\": \"expedicao_esteira1\",\n  \"addr\": \"DB103,X20.2\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Esteira 2 – Expedição\",\n  \"symbol\": \"expedicao_esteira2\",\n  \"addr\": \"DB103,X20.3\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Presença peça – Montagem (stopper)\",\n  \"symbol\": \"montagem_pecaStopper\",\n  \"addr\": \"DB102,X7.0\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Presença peça – Expedição (stopper)\",\n  \"symbol\": \"expedicao_pecaStopper\",\n  \"addr\": \"DB103,X6.0\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Estado: ocupado\",\n  \"symbol\": \"ocupado\",\n  \"addr\": \"DB9,X100.0\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Estado: aguardando\",\n  \"symbol\": \"aguardando\",\n  \"addr\": \"DB9,X100.1\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Estado: manual\",\n  \"symbol\": \"manual\",\n  \"addr\": \"DB9,X100.2\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Comutador automático\",\n  \"symbol\": \"comutadorAutomatico\",\n  \"addr\": \"DB9,X110.1\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Condição para iniciar\",\n  \"symbol\": \"condicaoIniciar\",\n  \"addr\": \"DB9,X110.6\",\n  \"type\": \"BOOL\"\n },\n {\n  \"signal\": \"Número da OP\",\n  \"symbol\": \"numeroOP\",\n  \"addr\": \"DB9,I96\",\n  \"type\": \"INT\"\n }\n]);\n",
+    "finalize": "",
+    "libs": [],
+    "x": 680,
+    "y": 140,
+    "wires": [
+      [
+        "0539095bf7da2d8b"
+      ]
+    ]
+  },
+  {
+    "id": "0539095bf7da2d8b",
+    "type": "debug",
+    "z": "9ca85083ce77b919",
+    "name": "Snapshot (sidebar + terminal)",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 940,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "942e8a903b73bfdf",
+    "type": "inject",
+    "z": "9ca85083ce77b919",
+    "name": "SIMULAR snapshot (sem CLP)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 180,
+    "y": 240,
+    "wires": [
+      [
+        "c4a6aa3acda72b44"
+      ]
+    ]
+  },
+  {
+    "id": "c4a6aa3acda72b44",
+    "type": "function",
+    "z": "9ca85083ce77b919",
+    "name": "Snapshot SIMULADO",
+    "func": "// Snapshot SIMULADO (sem CLP) — serve para testar o formato da evidência.\n// Resultado marcado como source = \"SIMULATED\": NÃO vale como validação do CLP.\nconst v = {};\nfor (const t of flow.get(\"diag_tags\") || []) {\n    v[t.symbol] = t.type === \"INT\" || t.type === \"WORD\" ? 0 : false;\n}\nv.processo_segurancaOK = true; v.montagem_segurancaOK = true; v.expedicao_segurancaOK = true;\nmsg.payload = v;\nmsg.source = \"SIMULATED\";\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 240,
+    "wires": [
+      [
+        "b37f1bb8f87191af"
+      ]
+    ]
+  },
+  {
+    "id": "702357081ef16952",
+    "type": "status",
+    "z": "9ca85083ce77b919",
+    "name": "Status conexão S7",
+    "scope": [
+      "6994a4752a3b7180"
+    ],
+    "x": 160,
+    "y": 300,
+    "wires": [
+      [
+        "c0a7ebb033315740"
+      ]
+    ]
+  },
+  {
+    "id": "c0a7ebb033315740",
+    "type": "function",
+    "z": "9ca85083ce77b919",
+    "name": "Guarda status conexão",
+    "func": "// Guarda o status de conexão mostrado pelo nó s7 in (online / offline / erro)\nflow.set(\"diag_conn\", (msg.status && msg.status.text) || \"desconhecido\");\nflow.set(\"diag_conn_at\", new Date().toISOString());\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 300,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "9ad3fb403b472b0d",
+    "type": "function",
+    "z": "9ca85083ce77b919",
+    "name": "Último snapshot (JSON)",
+    "func": "// GET /diag/s7  -> último snapshot em JSON\nmsg.payload = flow.get(\"last_diag\") || { aviso: \"Nenhum snapshot ainda. Clique em LER SNAPSHOT AGORA.\" };\nmsg.headers = { \"Content-Type\": \"application/json; charset=utf-8\" };\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 380,
+    "wires": [
+      [
+        "3b62ffb252fd957e"
+      ]
+    ]
+  },
+  {
+    "id": "02fcc865330850f0",
+    "type": "function",
+    "z": "9ca85083ce77b919",
+    "name": "Último snapshot (CSV)",
+    "func": "// GET /diag/s7.csv  -> último snapshot em CSV (abre no Excel). Salvar em docs/evidence/sprint1/\nconst s = flow.get(\"last_diag\");\nif (!s) { msg.statusCode = 404; msg.payload = \"Nenhum snapshot ainda.\"; return msg; }\nconst q = (x) => '\"' + String(x === null || x === undefined ? \"\" : x).replace(/\"/g, '\"\"') + '\"';\nconst lines = [[\"captured_at\", \"source\", \"sinal\", \"simbolo\", \"endereco\", \"tipo\", \"valor_lido\", \"valor_tia\", \"confere\"].join(\";\")];\nfor (const r of s.rows) {\n    lines.push([s.captured_at, s.source, r.sinal, r.simbolo, r.endereco, r.tipo, r.valor_lido, \"\", \"\"].map(q).join(\";\"));\n}\nmsg.payload = \"\\ufeff\" + lines.join(\"\\r\\n\");\nmsg.headers = {\n    \"Content-Type\": \"text/csv; charset=utf-8\",\n    \"Content-Disposition\": \"attachment; filename=G1-leitura-s7-\" + s.captured_at.replace(/[:.]/g, \"-\") + \".csv\"\n};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 440,
+    "wires": [
+      [
+        "051b4c29e46db29a"
+      ]
+    ]
+  },
+  {
+    "id": "7973a3093f26ff4f",
+    "type": "http in",
+    "z": "9ca85083ce77b919",
+    "name": "GET /diag/s7",
+    "url": "/diag/s7",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 380,
+    "wires": [
+      [
+        "9ad3fb403b472b0d"
+      ]
+    ]
+  },
+  {
+    "id": "3b62ffb252fd957e",
+    "type": "http response",
+    "z": "9ca85083ce77b919",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 560,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "6f608713ef4ed984",
+    "type": "http in",
+    "z": "9ca85083ce77b919",
+    "name": "GET /diag/s7.csv",
+    "url": "/diag/s7.csv",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 440,
+    "wires": [
+      [
+        "02fcc865330850f0"
+      ]
+    ]
+  },
+  {
+    "id": "051b4c29e46db29a",
+    "type": "http response",
+    "z": "9ca85083ce77b919",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 560,
+    "y": 440,
+    "wires": []
+  },
+  {
+    "id": "bf72129acd28ed53",
+    "type": "s7 endpoint",
+    "transport": "iso-on-tcp",
+    "address": "192.168.150.10",
+    "port": "102",
+    "rack": "0",
+    "slot": "1",
+    "localtsaphi": "01",
+    "localtsaplo": "00",
+    "remotetsaphi": "01",
+    "remotetsaplo": "00",
+    "connmode": "rack-slot",
+    "adapter": "",
+    "busaddr": "2",
+    "cycletime": "1000",
+    "timeout": "2000",
+    "name": "DIAG S7-1200 (somente leitura)",
+    "vartable": [
+      {
+        "addr": "DB9,X100.3",
+        "name": "emergencia"
+      },
+      {
+        "addr": "DB9,X110.0",
+        "name": "emergenciaAtivada"
+      },
+      {
+        "addr": "DB101,X0.7",
+        "name": "processo_botaoVerde"
+      },
+      {
+        "addr": "DB102,X6.6",
+        "name": "montagem_botaoVerde"
+      },
+      {
+        "addr": "DB103,X0.6",
+        "name": "expedicao_botaoVerde"
+      },
+      {
+        "addr": "DB101,X1.0",
+        "name": "processo_botaoVermelho"
+      },
+      {
+        "addr": "DB102,X6.7",
+        "name": "montagem_botaoVermelho"
+      },
+      {
+        "addr": "DB103,X0.7",
+        "name": "expedicao_botaoVermelho"
+      },
+      {
+        "addr": "DB101,X0.1",
+        "name": "processo_segurancaOK"
+      },
+      {
+        "addr": "DB102,X0.1",
+        "name": "montagem_segurancaOK"
+      },
+      {
+        "addr": "DB103,X0.1",
+        "name": "expedicao_segurancaOK"
+      },
+      {
+        "addr": "DB101,X0.6",
+        "name": "processo_chaveAutomatico"
+      },
+      {
+        "addr": "DB102,X6.5",
+        "name": "montagem_chaveAutomatico"
+      },
+      {
+        "addr": "DB103,X0.5",
+        "name": "expedicao_chaveAutomatico"
+      },
+      {
+        "addr": "DB101,X20.3",
+        "name": "processo_esteira1"
+      },
+      {
+        "addr": "DB101,X20.4",
+        "name": "processo_esteira2"
+      },
+      {
+        "addr": "DB102,X30.3",
+        "name": "montagem_esteira1"
+      },
+      {
+        "addr": "DB102,X30.4",
+        "name": "montagem_esteira2"
+      },
+      {
+        "addr": "DB103,X20.2",
+        "name": "expedicao_esteira1"
+      },
+      {
+        "addr": "DB103,X20.3",
+        "name": "expedicao_esteira2"
+      },
+      {
+        "addr": "DB102,X7.0",
+        "name": "montagem_pecaStopper"
+      },
+      {
+        "addr": "DB103,X6.0",
+        "name": "expedicao_pecaStopper"
+      },
+      {
+        "addr": "DB9,X100.0",
+        "name": "ocupado"
+      },
+      {
+        "addr": "DB9,X100.1",
+        "name": "aguardando"
+      },
+      {
+        "addr": "DB9,X100.2",
+        "name": "manual"
+      },
+      {
+        "addr": "DB9,X110.1",
+        "name": "comutadorAutomatico"
+      },
+      {
+        "addr": "DB9,X110.6",
+        "name": "condicaoIniciar"
+      },
+      {
+        "addr": "DB9,I96",
+        "name": "numeroOP"
+      }
+    ]
+  }
+]

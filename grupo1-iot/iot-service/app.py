@@ -88,6 +88,7 @@ class TelemetryIn(BaseModel):
     e preservados integralmente em raw_payload (JSONB)."""
     model_config = ConfigDict(extra="allow")
 
+    schema_version: str = Field("1.0", pattern=r"^1\.\d+$", description="Versão do contrato (contracts/events). Só aceita 1.x")
     msg_id: str = Field(..., min_length=8, max_length=120, description="Chave de idempotência gerada na borda")
     machine_id: str = Field("SMART-40-PLANTA-N2", max_length=60)
     timestamp: datetime = Field(..., description="Momento da LEITURA no CLP (não o da gravação)")
@@ -367,6 +368,7 @@ def _to_status(row: Dict[str, Any]) -> Dict[str, Any]:
         "conveyor_speed_m_s": speed,
         "belt_running": raw.get("belt_running"),
         "stations": raw.get("stations"),
+        "presence": raw.get("presence"),
         # --- compatibilidade com test_integration.py do professor (remover após unificar o contrato) ---
         "start_button": row["start_button_pressed"],
         "emergency_button": row["emergency_pressed"],

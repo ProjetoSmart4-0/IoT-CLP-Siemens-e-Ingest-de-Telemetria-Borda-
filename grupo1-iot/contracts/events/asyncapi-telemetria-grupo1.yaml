@@ -1,0 +1,207 @@
+asyncapi: '2.6.0'
+id: 'urn:smart40:planta-n2:grupo1:telemetria'
+info:
+  title: SMART 4.0 — Eventos de Telemetria da Borda (Grupo 1)
+  version: '1.0.0-rc1'
+  description: |
+    Contrato dos tópicos MQTT publicados/consumidos pelo gateway de borda (Node-RED) do Grupo 1.
+    Complementa o openapi-spec.yaml (REST), que não descreve MQTT/WebSocket.
+
+    Status: CANDIDATO — aguardando revisão dos consumidores (G3, G4, G5).
+    Regras:
+    - A borda lê o CLP a cada 100 ms, mas publica só em mudança de estado + heartbeat (5 s).
+    - Entrega "pelo menos uma vez" (QoS 1). Consumidores DEVEM deduplicar por `msg_id`.
+    - `timestamp` é sempre UTC ISO-8601 (sufixo Z) e marca a LEITURA no CLP, não a chegada.
+    - Nesta sprint a borda é SOMENTE LEITURA: nenhum comando chega ao CLP.
+    - Mudanças incompatíveis exigem novo `schema_version` major e aprovação dos consumidores.
+  contact:
+    name: Grupo 1 — IoT, CLP Siemens & Ingestão de Telemetria
+  license:
+    name: Uso didático — Projeto SMART 4.0
+tags:
+  - name: grupo1
+  - name: telemetria
+servers:
+  hivemq-dev:
+    url: '{cluster}.s1.eu.hivemq.cloud:8883'
+    protocol: mqtts
+    protocolVersion: '3.1.1'
+    description: HiveMQ Cloud (desenvolvimento). TLS obrigatório; sem porta 1883 em nuvem.
+    variables:
+      cluster:
+        default: SEU-CLUSTER
+        description: Identificador do cluster do grupo (não é segredo, mas não é público).
+    security:
+      - userPassword: []
+defaultContentType: application/json
+
+channels:
+  industria40/telemetry/data:
+    description: Telemetria da máquina (estado, botões, esteiras, segurança, presença).
+    subscribe:
+      operationId: receberTelemetria
+      summary: Consumidores (iot-service) recebem a telemetria publicada pela borda.
+      bindings:
+        mqtt:
+          qos: 1
+          retain: false
+          bindingVersion: '0.1.0'
+      message:
+        $ref: '#/components/messages/Telemetry'
+
+  industria40/edge/status:
+    description: |
+      Presença do gateway (birth + last-will). Retido, para que um cliente que conecte
+      depois saiba se a borda está ONLINE. Útil para o Grupo 4 exibir DESCONECTADO.
+    subscribe:
+      operationId: receberStatusBorda
+      bindings:
+        mqtt:
+          qos: 1
+          retain: true
+          bindingVersion: '0.1.0'
+      message:
+        $ref: '#/components/messages/EdgeStatus'
+
+  industria40/telemetry/commands:
+    description: |
+      RESERVADO para a Sprint 3. Publicado pelo iot-service; a borda NÃO assina nesta sprint.
+      Um comando remoto nunca substitui a emergência física.
+    publish:
+      operationId: enviarComando
+      bindings:
+        mqtt:
+          qos: 1
+          retain: false
+          bindingVersion: '0.1.0'
+      message:
+        $ref: '#/components/messages/Command'
+
+components:
+  securitySchemes:
+    userPassword:
+      type: userPassword
+      description: Uma credencial por cliente no HiveMQ (edge-grupo1, iot-service). Nunca versionar.
+
+  messages:
+    Telemetry:
+      messageId: Telemetry
+      name: Telemetry
+      title: Telemetria da borda v1
+      payload:
+        $ref: '#/components/schemas/Telemetry'
+      examples:
+        - name: esteira-rodando
+          payload:
+            schema_version: '1.0'
+            msg_id: SMART-40-PLANTA-N2-1760000000123-42-k3j9xq
+            machine_id: SMART-40-PLANTA-N2
+            timestamp: '2026-10-06T23:20:00.123Z'
+            seq: 42
+            event: STATE_CHANGE
+            source: PLC
+            buffered: false
+            machine_state: RUNNING
+            belt_running: true
+            belt_speed: null
+            belt_speed_source: UNAVAILABLE
+            buttons: { start_pressed: false, stop_pressed: false, emergency_pressed: false, reset_pressed: false }
+            stations:
+              processo: { seguranca_ok: true, automatico: true, botao_verde: false, botao_vermelho: false, esteira1: true, esteira2: true }
+              montagem: { seguranca_ok: true, automatico: true, botao_verde: false, botao_vermelho: false, esteira1: true, esteira2: false }
+              expedicao: { seguranca_ok: true, automatico: true, botao_verde: false, botao_vermelho: false, esteira1: false, esteira2: false }
+            flags: { ocupado: true, aguardando: false, manual: false, comutador_automatico: true, condicao_iniciar: true }
+            presence: { montagem: true, expedicao: false }
+            numero_op: 1
+
+    EdgeStatus:
+      messageId: EdgeStatus
+      name: EdgeStatus
+      payload:
+        type: object
+        required: [status, machine_id]
+        properties:
+          status: { type: string, enum: [ONLINE, OFFLINE] }
+          machine_id: { type: string }
+      examples:
+        - payload: { status: OFFLINE, machine_id: SMART-40-PLANTA-N2 }
+
+    Command:
+      messageId: Command
+      name: Command
+      payload:
+        type: object
+        required: [command_id, command, timestamp]
+        properties:
+          command_id: { type: string, format: uuid }
+          command: { type: string, enum: [START, STOP, RESET, EMERGENCY] }
+          parameters: { type: object, additionalProperties: true }
+          requested_by: { type: string }
+          role: { type: string, enum: [OPERATOR, ENGINEER, ADMIN] }
+          timestamp: { type: string, format: date-time }
+
+  schemas:
+    Station:
+      type: object
+      properties:
+        seguranca_ok: { type: boolean, description: 'Bit "Segurança OK" da estação. DIFERENTE da emergência.' }
+        automatico: { type: boolean }
+        botao_verde: { type: boolean, description: Start da estação }
+        botao_vermelho: { type: boolean, description: Stop da estação }
+        esteira1: { type: boolean, description: Comando de ligar a esteira 1 (não é velocidade) }
+        esteira2: { type: boolean }
+
+    Telemetry:
+      type: object
+      required: [schema_version, msg_id, machine_id, timestamp, seq, event, machine_state, buttons]
+      properties:
+        schema_version: { type: string, pattern: '^1\.\d+$', description: Versão do contrato }
+        msg_id: { type: string, minLength: 8, maxLength: 120, description: Chave de idempotência gerada na borda }
+        machine_id: { type: string, maxLength: 60 }
+        timestamp: { type: string, format: date-time, description: UTC ISO-8601 da leitura no CLP }
+        seq: { type: integer, minimum: 1, description: Contador da borda (reinicia se o Node-RED reiniciar) }
+        event: { type: string, enum: [STATE_CHANGE, HEARTBEAT] }
+        source: { type: string, enum: [PLC, SIMULATOR], description: SIMULATOR nunca vale como validação do CLP }
+        buffered: { type: boolean, description: true = ficou retida offline e foi reenviada }
+        machine_state:
+          type: string
+          enum: [STOPPED, RUNNING, PAUSED, EMERGENCY, ALARM]
+          description: |
+            Derivado na borda (regra em docs/mapeamento-clp.md; hipótese a validar na bancada):
+            EMERGENCY > ALARM (alguma segurança não OK) > RUNNING > PAUSED (manual) > STOPPED.
+        belt_running: { type: boolean }
+        belt_speed:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 999.99
+          description: Unidade a congelar (proposta G1 — mm/s). null enquanto não houver tag de velocidade.
+        belt_speed_source: { type: string, enum: [PLC_DIGITAL, NOMINAL_CONFIG, UNAVAILABLE] }
+        buttons:
+          type: object
+          required: [start_pressed, stop_pressed, emergency_pressed, reset_pressed]
+          properties:
+            start_pressed: { type: boolean, description: Algum botão verde pressionado }
+            stop_pressed: { type: boolean, description: Algum botão vermelho pressionado }
+            emergency_pressed: { type: boolean, description: emergencia OU emergenciaAtivada }
+            reset_pressed: { type: boolean, description: Sempre false — sem tag de Reset mapeada }
+        stations:
+          type: object
+          properties:
+            processo: { $ref: '#/components/schemas/Station' }
+            montagem: { $ref: '#/components/schemas/Station' }
+            expedicao: { $ref: '#/components/schemas/Station' }
+        flags:
+          type: object
+          properties:
+            ocupado: { type: boolean }
+            aguardando: { type: boolean }
+            manual: { type: boolean }
+            comutador_automatico: { type: boolean }
+            condicao_iniciar: { type: boolean }
+        presence:
+          type: object
+          description: Peça no stopper (a acordar com G2/G3)
+          properties:
+            montagem: { type: boolean }
+            expedicao: { type: boolean }
+        numero_op: { type: [integer, 'null'] }

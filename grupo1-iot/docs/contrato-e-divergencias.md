@@ -1,5 +1,8 @@
 # Contrato do Grupo 1 e divergências encontradas nos arquivos-base
 
+> Contrato formal dos eventos: `contracts/events/asyncapi-telemetria-grupo1.yaml` (AsyncAPI 2.6).
+> Decisões e parecer sobre o OpenAPI: `docs/decisions/G1-decisoes-sprint1.md`.
+
 ## 1. Tópicos MQTT (HiveMQ Cloud, MQTTS 8883)
 
 | Tópico | Publicador | QoS / Retain | Conteúdo |
@@ -16,6 +19,7 @@ rapidamente os planos gratuitos.
 
 ```json
 {
+  "schema_version": "1.0",
   "msg_id": "SMART-40-PLANTA-N2-1759795200123-42-k3j9xq",
   "machine_id": "SMART-40-PLANTA-N2",
   "timestamp": "2026-10-06T23:20:00.123Z",
@@ -32,10 +36,12 @@ rapidamente os planos gratuitos.
                                "botao_vermelho": false, "esteira1": true, "esteira2": true },
                 "montagem": { "...": "..." }, "expedicao": { "...": "..." } },
   "flags": { "ocupado": true, "aguardando": false, "manual": false, "comutador_automatico": true, "condicao_iniciar": true },
+  "presence": { "montagem": true, "expedicao": false },
   "numero_op": 1
 }
 ```
 
+- `schema_version` — versão do contrato; o iot-service só aceita `1.x`.
 - `msg_id` — chave de idempotência; o iot-service ignora repetições (reenvio pós-queda).
 - `timestamp` — momento da **leitura** no CLP; mensagens do buffer chegam atrasadas mas com o horário correto.
 - `buffered: true` — a mensagem ficou retida offline e foi descarregada na reconexão.
