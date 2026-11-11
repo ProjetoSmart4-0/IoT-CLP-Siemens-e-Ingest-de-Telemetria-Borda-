@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "envelope.v1",
+  "type": "object",
+  "required": ["schema_version", "message_id", "unit_id", "asset_id", "tag",
+               "value", "value_type", "unit", "origin", "timestamps",
+               "quality", "stream_id", "seq"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "message_id":     { "type": "string" },
+    "unit_id":        { "type": "string" },
+    "asset_id":       { "type": "string" },
+    "tag":            { "type": "string", "pattern": "^[a-z_]+(\\.[a-z_]+)+$" },
+    "value":          { "type": ["number", "string", "boolean", "array", "null"] },
+    "value_type":     { "type": "string" },
+    "unit":           { "type": ["string", "null"] },
+    "origin":         { "enum": ["medido", "calculado", "simulado"] },
+    "timestamps": {
+      "type": "object",
+      "properties": {
+        "source_utc":      { "type": ["string", "null"] },
+        "gateway_utc":     { "type": ["string", "null"] },
+        "ingest_utc":      { "type": ["string", "null"] },
+        "emitted_utc":     { "type": ["string", "null"] },
+        "source_uptime_s": { "type": ["number", "null"] }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "properties": {
+        "status":      { "enum": ["GOOD", "UNCERTAIN", "BAD"] },
+        "source_code": { "type": ["string", "null"] },
+        "reason":      { "type": ["string", "null"] }
+      }
+    },
+    "stream_id": { "type": "string" },
+    "seq":       { "type": "integer", "minimum": 0 },
+    "context":   { "type": "object" }
+  }
+}

@@ -1,0 +1,27 @@
+name: grupo1-gateway
+on:
+  push:
+    paths: ["packages/gateway/**", "packages/shared/**", "docker/mock-*/**"]
+  pull_request:
+    paths: ["packages/gateway/**", "packages/shared/**", "docker/mock-*/**"]
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: cd packages/gateway && uv sync && uv run pytest -q
+  contrato-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: astral-sh/setup-uv@v5
+      - run: cd packages/gateway && uv sync && uv run python tools/gerar_fixture.py
+      - run: cd packages/shared && npm test
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build gateway mock-plc mock-ur

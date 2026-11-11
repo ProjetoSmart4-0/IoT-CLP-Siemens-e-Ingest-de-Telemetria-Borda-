@@ -1,0 +1,18 @@
+{
+  "map_version": "n2-draft-1",
+  "description": "RASCUNHO para a bancada. Endereços S7 vêm de docs/tags/tabela-tags-grupo1.csv (status A CONFIRMAR). Os NodeIds OPC UA dependem de o servidor OPC UA do S7-1200 estar habilitado e de os DBs estarem expostos; confirmar no TIA antes de usar. Enquanto não confirmado, o status é PASS WITH LIMITATION (mock).",
+  "plc_tags": [
+    { "tag": "machine.emergency", "component_id": "plc", "node": { "node_id": "ns=3;s=\"DB9\".\"emergencia\"" }, "value_type": "bool", "unit": null, "s7_address": "DB9,X100.3" },
+    { "tag": "machine.emergency_latched", "component_id": "plc", "node": { "node_id": "ns=3;s=\"DB9\".\"emergenciaAtivada\"" }, "value_type": "bool", "unit": null, "s7_address": "DB9,X110.0" },
+    { "tag": "machine.busy", "component_id": "plc", "node": { "node_id": "ns=3;s=\"DB9\".\"ocupado\"" }, "value_type": "bool", "unit": null, "s7_address": "DB9,X100.0" },
+    { "tag": "machine.manual", "component_id": "plc", "node": { "node_id": "ns=3;s=\"DB9\".\"manual\"" }, "value_type": "bool", "unit": null, "s7_address": "DB9,X100.2" },
+    { "tag": "machine.order_number", "component_id": "plc", "node": { "node_id": "ns=3;s=\"DB9\".\"numeroOP\"" }, "value_type": "int16", "unit": null, "s7_address": "DB9,I96" },
+    { "tag": "processo.safety_ok", "component_id": "processo", "node": { "node_id": "ns=3;s=\"DB101\".\"segurancaOK\"" }, "value_type": "bool", "unit": null, "s7_address": "DB101,X0.1" },
+    { "tag": "processo.belt_one", "component_id": "processo", "node": { "node_id": "ns=3;s=\"DB101\".\"esteira1\"" }, "value_type": "bool", "unit": null, "s7_address": "DB101,X20.3" },
+    { "tag": "processo.belt_two", "component_id": "processo", "node": { "node_id": "ns=3;s=\"DB101\".\"esteira2\"" }, "value_type": "bool", "unit": null, "s7_address": "DB101,X20.4" },
+    { "tag": "montagem.safety_ok", "component_id": "montagem", "node": { "node_id": "ns=3;s=\"DB102\".\"segurancaOK\"" }, "value_type": "bool", "unit": null, "s7_address": "DB102,X0.1" },
+    { "tag": "montagem.part_present", "component_id": "montagem", "node": { "node_id": "ns=3;s=\"DB102\".\"pecaStopper\"" }, "value_type": "bool", "unit": null, "s7_address": "DB102,X7.0" },
+    { "tag": "expedicao.safety_ok", "component_id": "expedicao", "node": { "node_id": "ns=3;s=\"DB103\".\"segurancaOK\"" }, "value_type": "bool", "unit": null, "s7_address": "DB103,X0.1" },
+    { "tag": "expedicao.part_present", "component_id": "expedicao", "node": { "node_id": "ns=3;s=\"DB103\".\"pecaStopper\"" }, "value_type": "bool", "unit": null, "s7_address": "DB103,X6.0" }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "map_version": "mock-1",
+  "description": "Mapa do CLP simulado (docker/mock-plc). Mesmo nome semântico do mapa real.",
+  "plc_tags": [
+    {
+      "tag": "machine.state",
+      "component_id": "plc",
+      "node": { "ns_uri": "http://n2.local/mock", "browse_path": ["Machine", "State"] },
+      "value_type": "string",
+      "unit": null,
+      "enum": { "0": "parada", "1": "pronta", "2": "executando", "3": "alarme" }
+    },
+    {
+      "tag": "machine.part_present",
+      "component_id": "plc",
+      "node": { "ns_uri": "http://n2.local/mock", "browse_path": ["Machine", "PartPresent"] },
+      "value_type": "bool",
+      "unit": null
+    }
+  ]
+}

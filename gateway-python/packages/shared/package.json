@@ -1,0 +1,13 @@
+{
+  "name": "@n2/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./validate": "./src/validate.js",
+    "./schema": "./schema/envelope.v1.schema.json"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

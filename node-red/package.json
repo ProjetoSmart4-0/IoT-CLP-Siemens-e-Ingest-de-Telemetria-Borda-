@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "node-red-contrib-s7": "^3.1.3"
+  }
+}

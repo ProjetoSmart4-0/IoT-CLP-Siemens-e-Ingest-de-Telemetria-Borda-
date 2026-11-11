@@ -1,0 +1,1074 @@
+[
+    {
+        "id": "b6a3277f0d94318e",
+        "type": "tab",
+        "label": "Grupo 1 - Ingestão N2 (Sprint 2)",
+        "disabled": false,
+        "info": "Sprint 2 do Grupo 1.\nCLP (100 ms) -> normalização -> agregação 500 ms -> outbox SQLite -> MQTTS 8883 (HiveMQ, TLS) -> iot-service -> Neon.\nINPUT_MODE: SIMULADOR | CLP | REPLAY.  CAPTURE=true grava as leituras do CLP para o replay.\nVariáveis: duplo clique na aba -> Environment Variables.\nRequer Node.js >= 22.13 e o node-red/settings.js deste repositório (node:sqlite).",
+        "env": [
+            {
+                "name": "INPUT_MODE",
+                "value": "SIMULADOR",
+                "type": "str"
+            },
+            {
+                "name": "CAPTURE",
+                "value": "false",
+                "type": "str"
+            },
+            {
+                "name": "MACHINE_ID",
+                "value": "SMART-40-PLANTA-N2",
+                "type": "str"
+            },
+            {
+                "name": "AGG_WINDOW_MS",
+                "value": "500",
+                "type": "str"
+            },
+            {
+                "name": "MQTT_TOPIC_DATA",
+                "value": "industria40/telemetry/data",
+                "type": "str"
+            },
+            {
+                "name": "BELT_NOMINAL_SPEED",
+                "value": "",
+                "type": "str"
+            },
+            {
+                "name": "OUTBOX_MAX",
+                "value": "200000",
+                "type": "str"
+            },
+            {
+                "name": "OUTBOX_BATCH",
+                "value": "100",
+                "type": "str"
+            },
+            {
+                "name": "ACK_TIMEOUT_MS",
+                "value": "5000",
+                "type": "str"
+            },
+            {
+                "name": "OUTBOX_RETENTION_H",
+                "value": "24",
+                "type": "str"
+            }
+        ]
+    },
+    {
+        "id": "84b2ae2d4c049987",
+        "type": "comment",
+        "z": "b6a3277f0d94318e",
+        "name": "1) AQUISIÇÃO 100 ms: CLP real (s7 in) · simulador · replay",
+        "info": "INPUT_MODE escolhe a fonte. O s7 in lê o CLP do Estoque (192.168.150.10) a cada 100 ms, inclusive os DBs de comunicação das outras estações (DB101/102/103).",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "765dc2ae740b95c0",
+        "type": "s7 in",
+        "z": "b6a3277f0d94318e",
+        "endpoint": "769d6a476ed69167",
+        "mode": "all",
+        "variable": "",
+        "diff": false,
+        "name": "CLP Estoque S7-1200 (polling 100 ms)",
+        "x": 190,
+        "y": 100,
+        "wires": [
+            [
+                "30ff93c101252800"
+            ]
+        ]
+    },
+    {
+        "id": "ce318a327150e2fc",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "Clock 100 ms (simulador)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "3bd6d694dbe695c5"
+            ]
+        ]
+    },
+    {
+        "id": "d74911668803ff3d",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "SIM: botão START",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.5,
+        "topic": "sim_cmd",
+        "payload": "START",
+        "payloadType": "str",
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "3bd6d694dbe695c5"
+            ]
+        ]
+    },
+    {
+        "id": "39590a87810f6a77",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "SIM: botão STOP",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.5,
+        "topic": "sim_cmd",
+        "payload": "STOP",
+        "payloadType": "str",
+        "x": 160,
+        "y": 240,
+        "wires": [
+            [
+                "3bd6d694dbe695c5"
+            ]
+        ]
+    },
+    {
+        "id": "b9d3286d548d1b26",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "SIM: EMERGÊNCIA",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.5,
+        "topic": "sim_cmd",
+        "payload": "EMERGENCY",
+        "payloadType": "str",
+        "x": 160,
+        "y": 280,
+        "wires": [
+            [
+                "3bd6d694dbe695c5"
+            ]
+        ]
+    },
+    {
+        "id": "ac2d1820943592ea",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "SIM: RESET",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.5,
+        "topic": "sim_cmd",
+        "payload": "RESET",
+        "payloadType": "str",
+        "x": 160,
+        "y": 320,
+        "wires": [
+            [
+                "3bd6d694dbe695c5"
+            ]
+        ]
+    },
+    {
+        "id": "3bd6d694dbe695c5",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Simulador CLP",
+        "func": "// =============================================================================\n// SIMULADOR DO CLP (desenvolvimento sem a bancada). Ativo só com INPUT_MODE=SIMULADOR.\n// Gera um snapshot com OS MESMOS NOMES de variáveis do nó \"s7 in\" (modo \"all\").\n// Botões: msg.topic = \"sim_cmd\", msg.payload = START | STOP | EMERGENCY | RESET\n// =============================================================================\nif ((env.get(\"INPUT_MODE\") || \"SIMULADOR\") !== \"SIMULADOR\") { return null; }\n\nlet sim = context.get(\"sim\") || { running: false, emergency: false, pulse: null, pulseTicks: 0, op: 1 };\n\nif (msg.topic === \"sim_cmd\") {\n    const cmd = String(msg.payload || \"\").toUpperCase();\n    if (cmd === \"START\" && !sim.emergency) { sim.running = true; sim.pulse = \"START\"; }\n    if (cmd === \"STOP\")      { sim.running = false; sim.pulse = \"STOP\"; }\n    if (cmd === \"EMERGENCY\") { sim.running = false; sim.emergency = true; sim.pulse = null; }\n    if (cmd === \"RESET\")     { sim.emergency = false; sim.pulse = null; }\n    sim.pulseTicks = 3;                         // botão \"fica apertado\" ~300 ms\n    context.set(\"sim\", sim);\n    node.status({ fill: \"blue\", shape: \"ring\", text: \"SIM: \" + cmd });\n    return null;\n}\n\nconst green = sim.pulseTicks > 0 && sim.pulse === \"START\";\nconst red   = sim.pulseTicks > 0 && sim.pulse === \"STOP\";\nif (sim.pulseTicks > 0) { sim.pulseTicks--; }\ncontext.set(\"sim\", sim);\n\nconst belts = sim.running && !sim.emergency;\nconst station = (p) => ({\n    [p + \"_segurancaOK\"]: !sim.emergency,\n    [p + \"_chaveAutomatico\"]: true,\n    [p + \"_botaoVerde\"]: green,\n    [p + \"_botaoVermelho\"]: red,\n    [p + \"_esteira1\"]: belts,\n    [p + \"_esteira2\"]: belts\n});\n\nmsg.payload = Object.assign(\n    {\n        emergencia: sim.emergency, emergenciaAtivada: sim.emergency,\n        ocupado: belts, aguardando: !belts, manual: false,\n        comutadorAutomatico: true, condicaoIniciar: !sim.emergency,\n        numeroOP: sim.op, montagem_pecaStopper: belts, expedicao_pecaStopper: false\n    },\n    station(\"processo\"), station(\"montagem\"), station(\"expedicao\")\n);\nmsg.source = \"SIMULATOR\";\nnode.status({ fill: sim.emergency ? \"red\" : (belts ? \"green\" : \"grey\"), shape: \"dot\",\n              text: sim.emergency ? \"SIM: EMERGÊNCIA\" : (belts ? \"SIM: RODANDO\" : \"SIM: PARADO\") });\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 200,
+        "wires": [
+            [
+                "30ff93c101252800"
+            ]
+        ]
+    },
+    {
+        "id": "78007b00b65f7c7e",
+        "type": "http in",
+        "z": "b6a3277f0d94318e",
+        "name": "POST /replay/s7",
+        "url": "/replay/s7",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 380,
+        "wires": [
+            [
+                "faf758bfbc965f0a"
+            ]
+        ]
+    },
+    {
+        "id": "faf758bfbc965f0a",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Replay: entrada",
+        "func": "// =============================================================================\n// REPLAY: recebe um snapshot capturado na bancada (POST /replay/s7) e injeta no\n// pipeline como se viesse do nó \"s7 in\". Usado por tools/replay-telemetria.js.\n// Corpo: { \"captured_at\": \"ISO\", \"vars\": { emergencia: false, ... } }\n// Saída 1 -> pipeline · Saída 2 -> resposta HTTP\n// =============================================================================\nconst mode = env.get(\"INPUT_MODE\") || \"SIMULADOR\";\nconst body = msg.payload || {};\nconst res = { req: msg.req, res: msg.res, headers: { \"Content-Type\": \"application/json\" } };\n\nif (mode !== \"REPLAY\") {\n    return [null, Object.assign(res, { statusCode: 409,\n        payload: { erro: \"INPUT_MODE=\" + mode + \". Mude a variável INPUT_MODE da aba para REPLAY e faça Deploy.\" } })];\n}\nif (!body.vars || typeof body.vars !== \"object\") {\n    return [null, Object.assign(res, { statusCode: 400, payload: { erro: \"Campo 'vars' ausente no corpo\" } })];\n}\nconst n = (context.get(\"count\") || 0) + 1;\ncontext.set(\"count\", n);\nnode.status({ fill: \"blue\", shape: \"dot\", text: \"replay: \" + n + \" leituras\" });\nreturn [\n    { payload: body.vars, source: \"REPLAY\", captured_at: body.captured_at || null },\n    Object.assign(res, { statusCode: 202, payload: { aceito: true, n: n } })\n];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 380,
+        "wires": [
+            [
+                "30ff93c101252800"
+            ],
+            [
+                "84de0741b6df0671"
+            ]
+        ]
+    },
+    {
+        "id": "84de0741b6df0671",
+        "type": "http response",
+        "z": "b6a3277f0d94318e",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 610,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "30ff93c101252800",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Fonte ativa (INPUT_MODE)",
+        "func": "// =============================================================================\n// FONTE ATIVA: deixa passar só a fonte escolhida em INPUT_MODE\n//   CLP       -> leituras do nó \"s7 in\" (bancada real)\n//   SIMULADOR -> simulador interno\n//   REPLAY    -> capturas reinjetadas por tools/replay-telemetria.js\n// Saída 1 -> normalização · Saída 2 -> captura em arquivo (se CAPTURE=true)\n// =============================================================================\nconst MAP = { CLP: \"PLC\", SIMULADOR: \"SIMULATOR\", REPLAY: \"REPLAY\" };\nconst mode = env.get(\"INPUT_MODE\") || \"SIMULADOR\";\nconst source = msg.source || \"PLC\";               // o nó \"s7 in\" não marca a origem\nif (MAP[mode] !== source) { return null; }\nmsg.source = source;\n\nlet capture = null;\nif (env.get(\"CAPTURE\") === \"true\" && source === \"PLC\") {\n    // Uma linha JSON por leitura (formato lido pelo replay)\n    capture = {\n        filename: global.get(\"captureFile\") || \"captura-n2.jsonl\",\n        payload: JSON.stringify({ t: new Date().toISOString(), source: source, vars: msg.payload })\n    };\n}\nreturn [msg, capture];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 160,
+        "wires": [
+            [
+                "73315e874cb9152c"
+            ],
+            [
+                "82e3acb71ebb4226"
+            ]
+        ]
+    },
+    {
+        "id": "82e3acb71ebb4226",
+        "type": "file",
+        "z": "b6a3277f0d94318e",
+        "name": "Captura para replay (JSONL)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "utf8",
+        "x": 950,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "57adf61864357b91",
+        "type": "comment",
+        "z": "b6a3277f0d94318e",
+        "name": "2) NORMALIZAÇÃO + AGREGAÇÃO (janela de 500 ms)",
+        "info": "",
+        "x": 240,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "73315e874cb9152c",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Normaliza CLP → amostra",
+        "func": "// =============================================================================\n// NORMALIZAÇÃO: snapshot bruto do CLP -> amostra padronizada (uma a cada 100 ms)\n// Mesma regra de machine_state da Sprint 1 (HIPÓTESE a validar na bancada,\n// ver docs/mapeamento-clp.md e docs/tags/inventario_mapa_tags_n2.xlsx).\n// =============================================================================\nconst r = msg.payload || {};\nconst b = (k) => r[k] === true;\nconst NOMINAL = parseFloat(env.get(\"BELT_NOMINAL_SPEED\"));\n\nconst st = (p) => ({\n    seguranca_ok: b(p + \"_segurancaOK\"),\n    automatico: b(p + \"_chaveAutomatico\"),\n    botao_verde: b(p + \"_botaoVerde\"),\n    botao_vermelho: b(p + \"_botaoVermelho\"),\n    esteira1: b(p + \"_esteira1\"),\n    esteira2: b(p + \"_esteira2\")\n});\nconst stations = { processo: st(\"processo\"), montagem: st(\"montagem\"), expedicao: st(\"expedicao\") };\nconst list = Object.values(stations);\n\nconst emergency   = b(\"emergencia\") || b(\"emergenciaAtivada\");\nconst beltRunning = list.some(s => s.esteira1 || s.esteira2);\nconst safetyFault = list.some(s => !s.seguranca_ok);\n\nlet state;\nif (emergency)                        state = \"EMERGENCY\";\nelse if (safetyFault)                 state = \"ALARM\";\nelse if (beltRunning || b(\"ocupado\")) state = \"RUNNING\";\nelse if (b(\"manual\"))                 state = \"PAUSED\";\nelse                                  state = \"STOPPED\";\n\n// Velocidade: só existe se o CLP tiver o registrador (ex. do enunciado: DB1.DBD4, a confirmar).\nlet beltSpeed = 0, speedSource = \"PLC_DIGITAL\";\nif (typeof r.velocidadeEsteira === \"number\") { beltSpeed = r.velocidadeEsteira; speedSource = \"PLC_ANALOG\"; }\nelse if (beltRunning) {\n    if (isNaN(NOMINAL)) { beltSpeed = null; speedSource = \"UNAVAILABLE\"; }\n    else                { beltSpeed = NOMINAL; speedSource = \"NOMINAL_CONFIG\"; }\n}\n\nmsg.payload = {\n    t: Date.now(),\n    source: msg.source,\n    captured_at: msg.captured_at || null,\n    machine_state: state,\n    belt_running: beltRunning,\n    belt_speed: beltSpeed,\n    belt_speed_source: speedSource,\n    buttons: {\n        start_pressed: list.some(s => s.botao_verde),\n        stop_pressed: list.some(s => s.botao_vermelho),\n        emergency_pressed: emergency,\n        reset_pressed: false              // sem endereço de Reset no mapa (pendência)\n    },\n    stations: stations,\n    flags: {\n        ocupado: b(\"ocupado\"), aguardando: b(\"aguardando\"), manual: b(\"manual\"),\n        comutador_automatico: b(\"comutadorAutomatico\"), condicao_iniciar: b(\"condicaoIniciar\")\n    },\n    presence: { montagem: b(\"montagem_pecaStopper\"), expedicao: b(\"expedicao_pecaStopper\") },\n    numero_op: typeof r.numeroOP === \"number\" ? r.numeroOP : null\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 930,
+        "y": 140,
+        "wires": [
+            [
+                "32f2e555e77dd235",
+                "spa_lo_amostra"
+            ]
+        ]
+    },
+    {
+        "id": "dea43eb6cca0de6a",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "Janela 500 ms",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "__flush__",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 540,
+        "wires": [
+            [
+                "32f2e555e77dd235"
+            ]
+        ]
+    },
+    {
+        "id": "32f2e555e77dd235",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Agregador 500 ms",
+        "func": "// =============================================================================\n// AGREGADOR 500 ms: junta as amostras de 100 ms e emite UMA mensagem por janela.\n// - Estado/valores: os da ÚLTIMA amostra da janela.\n// - Botões: OU lógico na janela -> um toque de 100 ms nunca se perde.\n// - aggregation: quantas amostras, % de tempo com esteira ligada, estados vistos.\n// Entradas: amostra normalizada | msg.topic \"__flush__\" (inject a cada 500 ms)\n// =============================================================================\nconst WINDOW_MS = Number(env.get(\"AGG_WINDOW_MS\") || 500);\nconst MACHINE_ID = env.get(\"MACHINE_ID\") || \"SMART-40-PLANTA-N2\";\nlet w = context.get(\"w\");\n\nif (msg.topic !== \"__flush__\") {\n    const s = msg.payload;\n    if (!w) {\n        w = { start: s.t, n: 0, belt: 0, states: [], changes: 0, prevState: null,\n              buttons: { start_pressed: false, stop_pressed: false, emergency_pressed: false, reset_pressed: false } };\n    }\n    w.n += 1;\n    if (s.belt_running) w.belt += 1;\n    if (w.states.indexOf(s.machine_state) < 0) w.states.push(s.machine_state);\n    if (w.prevState !== null && w.prevState !== s.machine_state) w.changes += 1;\n    w.prevState = s.machine_state;\n    for (const k in w.buttons) { w.buttons[k] = w.buttons[k] || s.buttons[k] === true; }\n    w.last = s;\n    context.set(\"w\", w);\n    return null;\n}\n\n// ---- fim da janela ----\nif (!w || w.n === 0) {\n    node.status({ fill: \"grey\", shape: \"ring\", text: \"sem leituras da fonte\" });\n    return null;\n}\ncontext.set(\"w\", null);\nconst s = w.last;\nconst prevFinal = context.get(\"prevFinal\");\n// Emergência é estado travado (já aparece em machine_state); START/STOP são toques.\nconst changed = w.changes > 0 || (prevFinal !== undefined && prevFinal !== s.machine_state)\n             || w.buttons.start_pressed || w.buttons.stop_pressed;\ncontext.set(\"prevFinal\", s.machine_state);\n\nconst seq = (context.get(\"seq\") || 0) + 1;\ncontext.set(\"seq\", seq);\nconst now = Date.now();\n\nmsg.topic = env.get(\"MQTT_TOPIC_DATA\") || \"industria40/telemetry/data\";\nmsg.payload = {\n    schema_version: \"1.1\",                       // 1.1 = 1.0 + bloco \"aggregation\" (compatível)\n    msg_id: MACHINE_ID + \"-\" + s.t + \"-\" + seq + \"-\" + Math.random().toString(36).slice(2, 8),\n    machine_id: MACHINE_ID,\n    timestamp: new Date(s.t).toISOString(),      // momento da última leitura da janela\n    seq: seq,\n    event: changed ? \"STATE_CHANGE\" : \"PERIODIC\",\n    source: s.source,\n    buffered: false,\n    machine_state: s.machine_state,\n    belt_running: s.belt_running,\n    belt_speed: s.belt_speed,\n    belt_speed_source: s.belt_speed_source,\n    buttons: w.buttons,\n    stations: s.stations,\n    flags: s.flags,\n    presence: s.presence,\n    numero_op: s.numero_op,\n    aggregation: {\n        window_ms: WINDOW_MS,\n        samples: w.n,\n        window_start: new Date(w.start).toISOString(),\n        window_end: new Date(s.t).toISOString(),\n        belt_running_ratio: Math.round((w.belt / w.n) * 100) / 100,\n        states_seen: w.states,\n        state_changes: w.changes\n    }\n};\nif (s.captured_at) msg.payload.replay = { captured_at: s.captured_at };\n\nflow.set(\"last_telemetry\", msg.payload);\n// Últimas mensagens (GET /edge/recent) — usado pela validação de replay\nconst recent = flow.get(\"recent\") || [];\nrecent.push(msg.payload);\nif (recent.length > 3000) recent.splice(0, recent.length - 3000);\nflow.set(\"recent\", recent);\nnode.status({ fill: \"green\", shape: \"dot\", text: s.machine_state + \" · \" + w.n + \" amostras · seq \" + seq });\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 540,
+        "wires": [
+            [
+                "8d05b91709f8e44d",
+                "68c03cc87d54c455"
+            ]
+        ]
+    },
+    {
+        "id": "68c03cc87d54c455",
+        "type": "debug",
+        "z": "b6a3277f0d94318e",
+        "name": "Telemetria agregada",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "e06a7dc02e4d7d74",
+        "type": "comment",
+        "z": "b6a3277f0d94318e",
+        "name": "3) OUTBOX SQLite (outbox_telemetry) + envio garantido MQTTS 8883",
+        "info": "Toda mensagem é gravada antes do envio. PENDING -> INFLIGHT -> SENT (só com PUBACK do broker). Sem PUBACK em ACK_TIMEOUT_MS, volta para PENDING e é reenviada.",
+        "x": 270,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "8d05b91709f8e44d",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Outbox: grava (SQLite)",
+        "func": "// =============================================================================\n// OUTBOX (SQLite) — grava TODA mensagem antes de qualquer envio (Outbox Pattern).\n// O envio acontece no \"Outbox: despacha\"; a linha só vira SENT com o PUBACK do broker.\n// =============================================================================\nconst db = global.get(\"outbox_db\");\nif (!db) { node.status({ fill: \"red\", shape: \"ring\", text: \"outbox fechada\" }); node.error(\"Outbox indisponível\", msg); return null; }\nconst MAX = Number(env.get(\"OUTBOX_MAX\") || 200000);\nconst p = msg.payload;\nconst online = flow.get(\"mqtt_online\") === true && flow.get(\"force_offline\") !== true;\n\ndb.prepare(`INSERT OR IGNORE INTO outbox_telemetry (msg_id, topic, payload, created_offline, created_at)\n            VALUES (?, ?, ?, ?, ?)`)\n  .run(p.msg_id, msg.topic, JSON.stringify(p), online ? 0 : 1, new Date().toISOString());\n\nconst pending = db.prepare(\"SELECT COUNT(*) AS n FROM outbox_telemetry WHERE status != 'SENT'\").get().n;\nif (pending > MAX) {\n    const excess = pending - MAX;\n    db.prepare(`DELETE FROM outbox_telemetry WHERE id IN\n                (SELECT id FROM outbox_telemetry WHERE status = 'PENDING' ORDER BY id LIMIT ?)`).run(excess);\n    node.warn(\"Outbox cheia (\" + MAX + \"). Descartadas \" + excess + \" mensagens mais antigas.\");\n}\nnode.status({ fill: online ? \"green\" : \"yellow\", shape: \"dot\", text: \"pendentes: \" + Math.min(pending, MAX) });\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Abre o SQLite da outbox e cria a tabela (mesmo DDL de db/002_outbox_telemetry.sql).\n// Requer Node.js >= 22.13 (módulo nativo node:sqlite) e o bloco functionGlobalContext\n// do node-red/settings.js.\nconst sqlite = global.get(\"sqlite\");\nif (!sqlite) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"SQLite indisponível (Node.js >= 22.13?)\" });\n    node.error(\"node:sqlite indisponível. Use Node.js 22.13+ e o settings.js do repositório.\");\n    return;\n}\nconst file = global.get(\"outboxPath\") || \"outbox_n2.sqlite\";\nconst db = new sqlite.DatabaseSync(file);\ndb.exec(\"PRAGMA journal_mode = WAL;\");\ndb.exec(`CREATE TABLE IF NOT EXISTS outbox_telemetry (\n    id               INTEGER PRIMARY KEY AUTOINCREMENT,\n    msg_id           TEXT    NOT NULL UNIQUE,\n    topic            TEXT    NOT NULL,\n    payload          TEXT    NOT NULL,\n    status           TEXT    NOT NULL DEFAULT 'PENDING'\n                     CHECK (status IN ('PENDING', 'INFLIGHT', 'SENT')),\n    created_offline  INTEGER NOT NULL DEFAULT 0,\n    attempts         INTEGER NOT NULL DEFAULT 0,\n    created_at       TEXT    NOT NULL,\n    last_attempt_at  TEXT,\n    sent_at          TEXT,\n    last_error       TEXT\n);\nCREATE INDEX IF NOT EXISTS idx_outbox_status_id ON outbox_telemetry (status, id);\nCREATE INDEX IF NOT EXISTS idx_outbox_sent_at ON outbox_telemetry (sent_at);\n`);\nglobal.set(\"outbox_db\", db);\nconst n = db.prepare(\"SELECT COUNT(*) AS n FROM outbox_telemetry WHERE status != 'SENT'\").get().n;\nnode.status({ fill: \"green\", shape: \"dot\", text: \"outbox aberta · pendentes \" + n });\n",
+        "finalize": "const db = global.get(\"outbox_db\");\nif (db) { try { db.close(); } catch (e) { /* já fechado */ } }\nglobal.set(\"outbox_db\", undefined);\n",
+        "libs": [],
+        "x": 690,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4aed77b346874961",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "Despachar a cada 500 ms",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1.5,
+        "topic": "__tick__",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 700,
+        "wires": [
+            [
+                "f820bc4aebb24cf9"
+            ]
+        ]
+    },
+    {
+        "id": "166a476d5d1b0533",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "TESTE: forçar OFFLINE",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.5,
+        "topic": "__force_offline__",
+        "payload": "",
+        "payloadType": "str",
+        "x": 170,
+        "y": 740,
+        "wires": [
+            [
+                "f820bc4aebb24cf9"
+            ]
+        ]
+    },
+    {
+        "id": "f7dcaede28503253",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "TESTE: voltar ONLINE",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.5,
+        "topic": "__force_online__",
+        "payload": "",
+        "payloadType": "str",
+        "x": 170,
+        "y": 780,
+        "wires": [
+            [
+                "f820bc4aebb24cf9"
+            ]
+        ]
+    },
+    {
+        "id": "f820bc4aebb24cf9",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Outbox: despacha",
+        "func": "// =============================================================================\n// OUTBOX — despachante (envio garantido, \"pelo menos uma vez\", em ordem)\n//  1. Só envia com o MQTT conectado.\n//  2. INFLIGHT sem PUBACK há mais de ACK_TIMEOUT_MS volta para PENDING (reenvio).\n//  3. Enquanto houver INFLIGHT, não manda lote novo -> ordem preservada.\n//  4. Lote de até OUTBOX_BATCH linhas: PENDING -> INFLIGHT e sai para o \"mqtt out\".\n// Mensagem que esperou na outbox sai com buffered=true. Duplicata de reenvio é\n// descartada pelo iot-service (msg_id).\n// Entradas: tick (__tick__), status do mqtt out, __force_offline__/__force_online__\n// =============================================================================\nconst db = global.get(\"outbox_db\");\nif (!db) { return null; }\nconst ACK_MS = Number(env.get(\"ACK_TIMEOUT_MS\") || 5000);\nconst BATCH  = Number(env.get(\"OUTBOX_BATCH\") || 100);\n\nfunction isOnline() { return flow.get(\"mqtt_online\") === true && flow.get(\"force_offline\") !== true; }\nfunction count(st) { return db.prepare(\"SELECT COUNT(*) AS n FROM outbox_telemetry WHERE status = ?\").get(st).n; }\nfunction show() {\n    const p = count(\"PENDING\"), f = count(\"INFLIGHT\");\n    node.status(isOnline()\n        ? { fill: p + f ? \"yellow\" : \"green\", shape: \"dot\", text: \"online · pendentes \" + p + \" · aguardando PUBACK \" + f }\n        : { fill: \"red\", shape: \"ring\", text: \"OFFLINE · \" + (p + f) + \" msg na outbox\" });\n}\n\nif (msg.status) {\n    const was = isOnline();\n    flow.set(\"mqtt_online\", msg.status.fill === \"green\");\n    if (!was && isOnline()) node.warn(\"MQTT reconectado. Na outbox: \" + (count(\"PENDING\") + count(\"INFLIGHT\")));\n} else if (msg.topic === \"__force_offline__\") {\n    flow.set(\"force_offline\", true);\n} else if (msg.topic === \"__force_online__\") {\n    flow.set(\"force_offline\", false);\n}\nif (!isOnline()) { show(); return null; }\n\nconst now = Date.now();\ndb.prepare(`UPDATE outbox_telemetry SET status = 'PENDING', last_error = 'sem PUBACK'\n            WHERE status = 'INFLIGHT' AND last_attempt_at < ?`).run(new Date(now - ACK_MS).toISOString());\nif (count(\"INFLIGHT\") > 0) { show(); return null; }\n\nconst rows = db.prepare(`SELECT id, topic, payload, created_offline, attempts FROM outbox_telemetry\n                         WHERE status = 'PENDING' ORDER BY id LIMIT ?`).all(BATCH);\nif (rows.length === 0) { show(); return null; }\n\nconst iso = new Date(now).toISOString();\nconst mark = db.prepare(`UPDATE outbox_telemetry SET status = 'INFLIGHT', attempts = attempts + 1,\n                         last_attempt_at = ? WHERE id = ?`);\ndb.exec(\"BEGIN\");\ntry { rows.forEach(r => mark.run(iso, r.id)); db.exec(\"COMMIT\"); }\ncatch (e) { db.exec(\"ROLLBACK\"); throw e; }\n\nconst out = rows.map(r => {\n    const p = JSON.parse(r.payload);\n    if (r.created_offline === 1 || r.attempts > 0) p.buffered = true;\n    return { topic: r.topic, payload: p, qos: 1, retain: false, outbox_id: r.id };\n});\nshow();\nreturn [out];\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 740,
+        "wires": [
+            [
+                "8e38f736a677cab3"
+            ]
+        ]
+    },
+    {
+        "id": "8e38f736a677cab3",
+        "type": "mqtt out",
+        "z": "b6a3277f0d94318e",
+        "name": "MQTTS → HiveMQ Cloud (QoS 1)",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "6ef49b7fb510fb69",
+        "x": 720,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "473df925ee670eb6",
+        "type": "status",
+        "z": "b6a3277f0d94318e",
+        "name": "Conexão MQTT",
+        "scope": [
+            "8e38f736a677cab3"
+        ],
+        "x": 440,
+        "y": 820,
+        "wires": [
+            [
+                "f820bc4aebb24cf9"
+            ]
+        ]
+    },
+    {
+        "id": "cfd34ed5053dd7a3",
+        "type": "complete",
+        "z": "b6a3277f0d94318e",
+        "name": "PUBACK recebido",
+        "scope": [
+            "8e38f736a677cab3"
+        ],
+        "uncaught": false,
+        "x": 720,
+        "y": 800,
+        "wires": [
+            [
+                "a5824dcfdb8f7c7e"
+            ]
+        ]
+    },
+    {
+        "id": "a5824dcfdb8f7c7e",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Outbox: confirma (SENT)",
+        "func": "// PUBACK recebido (nó \"complete\" observando o \"mqtt out\"): a linha vira SENT.\nconst db = global.get(\"outbox_db\");\nif (!db || msg.outbox_id === undefined) { return null; }\ndb.prepare(\"UPDATE outbox_telemetry SET status = 'SENT', sent_at = ?, last_error = NULL WHERE id = ?\")\n  .run(new Date().toISOString(), msg.outbox_id);\nconst n = (context.get(\"n\") || 0) + 1;\ncontext.set(\"n\", n);\nnode.status({ fill: \"green\", shape: \"dot\", text: \"confirmadas (PUBACK): \" + n });\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "96a8dc1bb2840ed9",
+        "type": "catch",
+        "z": "b6a3277f0d94318e",
+        "name": "Erro no publish",
+        "scope": [
+            "8e38f736a677cab3"
+        ],
+        "uncaught": false,
+        "x": 720,
+        "y": 860,
+        "wires": [
+            [
+                "230cb852e39c28c4"
+            ]
+        ]
+    },
+    {
+        "id": "230cb852e39c28c4",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Outbox: falha (reenviar)",
+        "func": "// Erro no publish (nó \"catch\" do \"mqtt out\"): volta para PENDING para reenviar.\nconst db = global.get(\"outbox_db\");\nif (!db || msg.outbox_id === undefined) { return null; }\nconst err = (msg.error && msg.error.message) || \"erro no publish\";\ndb.prepare(\"UPDATE outbox_telemetry SET status = 'PENDING', last_error = ? WHERE id = ? AND status = 'INFLIGHT'\")\n  .run(String(err).slice(0, 200), msg.outbox_id);\nnode.status({ fill: \"red\", shape: \"ring\", text: err });\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 860,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0dd6999cb9333556",
+        "type": "inject",
+        "z": "b6a3277f0d94318e",
+        "name": "Limpeza a cada 1 h",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "3600",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 900,
+        "wires": [
+            [
+                "5ce1063414f69f67"
+            ]
+        ]
+    },
+    {
+        "id": "5ce1063414f69f67",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Outbox: limpeza (SENT > 24 h)",
+        "func": "// Apaga o que já foi confirmado há mais de OUTBOX_RETENTION_H horas (padrão 24 h).\nconst db = global.get(\"outbox_db\");\nif (!db) { return null; }\nconst hours = Number(env.get(\"OUTBOX_RETENTION_H\") || 24);\nconst limit = new Date(Date.now() - hours * 3600 * 1000).toISOString();\nconst r = db.prepare(\"DELETE FROM outbox_telemetry WHERE status = 'SENT' AND sent_at < ?\").run(limit);\nnode.status({ text: \"removidas: \" + r.changes + \" (\" + new Date().toLocaleTimeString() + \")\" });\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 900,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ae44c3aa8ee0f26c",
+        "type": "comment",
+        "z": "b6a3277f0d94318e",
+        "name": "4) Diagnóstico local: GET http://localhost:1880/edge/status",
+        "info": "",
+        "x": 260,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "1ca964b98d1a278a",
+        "type": "http in",
+        "z": "b6a3277f0d94318e",
+        "name": "GET /edge/status",
+        "url": "/edge/status",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 1000,
+        "wires": [
+            [
+                "fc83d66fc4908701"
+            ]
+        ]
+    },
+    {
+        "id": "fc83d66fc4908701",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Status do gateway",
+        "func": "// GET /edge/status -> diagnóstico LOCAL do gateway (usado também pelo replay)\nconst db = global.get(\"outbox_db\");\nconst counts = { PENDING: 0, INFLIGHT: 0, SENT: 0 };\nif (db) {\n    db.prepare(\"SELECT status, COUNT(*) AS n FROM outbox_telemetry GROUP BY status\").all()\n      .forEach(r => { counts[r.status] = r.n; });\n}\nmsg.payload = {\n    input_mode: env.get(\"INPUT_MODE\") || \"SIMULADOR\",\n    capture: env.get(\"CAPTURE\") === \"true\",\n    mqtt_online: flow.get(\"mqtt_online\") === true,\n    forced_offline: flow.get(\"force_offline\") === true,\n    outbox_ready: !!db,\n    outbox: counts,\n    last_telemetry: flow.get(\"last_telemetry\") || null\n};\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.statusCode = 200;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 1000,
+        "wires": [
+            [
+                "d2e39ff51e60cd92"
+            ]
+        ]
+    },
+    {
+        "id": "d2e39ff51e60cd92",
+        "type": "http response",
+        "z": "b6a3277f0d94318e",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 590,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "9539e833e1c9bd32",
+        "type": "http in",
+        "z": "b6a3277f0d94318e",
+        "name": "GET /edge/recent",
+        "url": "/edge/recent",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 1040,
+        "wires": [
+            [
+                "1f1fb70477a4c557"
+            ]
+        ]
+    },
+    {
+        "id": "1f1fb70477a4c557",
+        "type": "function",
+        "z": "b6a3277f0d94318e",
+        "name": "Mensagens recentes",
+        "func": "// GET /edge/recent?since_seq=N -> mensagens agregadas recentes (até 3000), em ordem\nconst since = Number((msg.req && msg.req.query && msg.req.query.since_seq) || 0);\nmsg.payload = (flow.get(\"recent\") || []).filter(m => m.seq > since);\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.statusCode = 200;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 1040,
+        "wires": [
+            [
+                "54249e21fab388f5"
+            ]
+        ]
+    },
+    {
+        "id": "54249e21fab388f5",
+        "type": "http response",
+        "z": "b6a3277f0d94318e",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 590,
+        "y": 1040,
+        "wires": []
+    },
+    {
+        "id": "ea92fd3059041839",
+        "type": "catch",
+        "z": "b6a3277f0d94318e",
+        "name": "Erros do fluxo",
+        "scope": null,
+        "uncaught": true,
+        "x": 150,
+        "y": 1100,
+        "wires": [
+            [
+                "bd38a3784ba6062d"
+            ]
+        ]
+    },
+    {
+        "id": "bd38a3784ba6062d",
+        "type": "debug",
+        "z": "b6a3277f0d94318e",
+        "name": "Log de erros",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 380,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "769d6a476ed69167",
+        "type": "s7 endpoint",
+        "transport": "iso-on-tcp",
+        "address": "192.168.150.10",
+        "port": "102",
+        "rack": "0",
+        "slot": "1",
+        "localtsaphi": "01",
+        "localtsaplo": "00",
+        "remotetsaphi": "01",
+        "remotetsaplo": "00",
+        "connmode": "rack-slot",
+        "adapter": "",
+        "busaddr": "2",
+        "cycletime": "100",
+        "timeout": "2000",
+        "name": "Estoque S7-1200 192.168.150.10 (somente leitura)",
+        "vartable": [
+            {
+                "addr": "DB9,X100.3",
+                "name": "emergencia"
+            },
+            {
+                "addr": "DB9,X110.0",
+                "name": "emergenciaAtivada"
+            },
+            {
+                "addr": "DB9,X100.0",
+                "name": "ocupado"
+            },
+            {
+                "addr": "DB9,X100.1",
+                "name": "aguardando"
+            },
+            {
+                "addr": "DB9,X100.2",
+                "name": "manual"
+            },
+            {
+                "addr": "DB9,X110.1",
+                "name": "comutadorAutomatico"
+            },
+            {
+                "addr": "DB9,X110.6",
+                "name": "condicaoIniciar"
+            },
+            {
+                "addr": "DB9,I96",
+                "name": "numeroOP"
+            },
+            {
+                "addr": "DB101,X0.1",
+                "name": "processo_segurancaOK"
+            },
+            {
+                "addr": "DB101,X0.6",
+                "name": "processo_chaveAutomatico"
+            },
+            {
+                "addr": "DB101,X0.7",
+                "name": "processo_botaoVerde"
+            },
+            {
+                "addr": "DB101,X1.0",
+                "name": "processo_botaoVermelho"
+            },
+            {
+                "addr": "DB101,X20.3",
+                "name": "processo_esteira1"
+            },
+            {
+                "addr": "DB101,X20.4",
+                "name": "processo_esteira2"
+            },
+            {
+                "addr": "DB102,X0.1",
+                "name": "montagem_segurancaOK"
+            },
+            {
+                "addr": "DB102,X6.5",
+                "name": "montagem_chaveAutomatico"
+            },
+            {
+                "addr": "DB102,X6.6",
+                "name": "montagem_botaoVerde"
+            },
+            {
+                "addr": "DB102,X6.7",
+                "name": "montagem_botaoVermelho"
+            },
+            {
+                "addr": "DB102,X30.3",
+                "name": "montagem_esteira1"
+            },
+            {
+                "addr": "DB102,X30.4",
+                "name": "montagem_esteira2"
+            },
+            {
+                "addr": "DB103,X0.1",
+                "name": "expedicao_segurancaOK"
+            },
+            {
+                "addr": "DB103,X0.5",
+                "name": "expedicao_chaveAutomatico"
+            },
+            {
+                "addr": "DB103,X0.6",
+                "name": "expedicao_botaoVerde"
+            },
+            {
+                "addr": "DB103,X0.7",
+                "name": "expedicao_botaoVermelho"
+            },
+            {
+                "addr": "DB103,X20.2",
+                "name": "expedicao_esteira1"
+            },
+            {
+                "addr": "DB103,X20.3",
+                "name": "expedicao_esteira2"
+            },
+            {
+                "addr": "DB102,X7.0",
+                "name": "montagem_pecaStopper"
+            },
+            {
+                "addr": "DB103,X6.0",
+                "name": "expedicao_pecaStopper"
+            }
+        ]
+    },
+    {
+        "id": "eea75f8c1bb95e53",
+        "type": "tls-config",
+        "name": "TLS HiveMQ Cloud (N2)",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "",
+        "keyname": "",
+        "caname": "",
+        "servername": "",
+        "verifyservercert": true,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "6ef49b7fb510fb69",
+        "type": "mqtt-broker",
+        "name": "HiveMQ Cloud (MQTTS 8883)",
+        "broker": "SEU-CLUSTER.s1.eu.hivemq.cloud",
+        "port": "8883",
+        "tls": "eea75f8c1bb95e53",
+        "clientid": "smart40-edge-grupo1-n2",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": "4",
+        "keepalive": "30",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "industria40/edge/status",
+        "birthQos": "1",
+        "birthRetain": "true",
+        "birthPayload": "{\"status\": \"ONLINE\", \"machine_id\": \"SMART-40-PLANTA-N2\", \"flow\": \"ingestao_n2\"}",
+        "birthMsg": {},
+        "closeTopic": "industria40/edge/status",
+        "closeQos": "1",
+        "closeRetain": "true",
+        "closePayload": "{\"status\": \"OFFLINE\", \"machine_id\": \"SMART-40-PLANTA-N2\", \"flow\": \"ingestao_n2\"}",
+        "closeMsg": {},
+        "willTopic": "industria40/edge/status",
+        "willQos": "1",
+        "willRetain": "true",
+        "willPayload": "{\"status\": \"OFFLINE\", \"machine_id\": \"SMART-40-PLANTA-N2\", \"flow\": \"ingestao_n2\"}",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "spa_lo_amostra",
+        "type": "link out",
+        "z": "b6a3277f0d94318e",
+        "name": "→ aba SPA WebSocket",
+        "mode": "link",
+        "links": [
+            "spa_li_amostra"
+        ],
+        "x": 1000,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "spa_li_sim",
+        "type": "link in",
+        "z": "b6a3277f0d94318e",
+        "name": "← comandos da SPA",
+        "links": [
+            "spa_lo_sim"
+        ],
+        "x": 150,
+        "y": 300,
+        "wires": [
+            [
+                "3bd6d694dbe695c5"
+            ]
+        ]
+    }
+]

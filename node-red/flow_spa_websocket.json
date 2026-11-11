@@ -1,0 +1,416 @@
+[
+  {
+    "id": "spa_tab",
+    "type": "tab",
+    "label": "Grupo 1 - SPA WebSocket (Sprint 2)",
+    "disabled": false,
+    "info": "Fluxo do PDF Grupo1-SPA-Nodered adaptado ao projeto. Consome a amostra normalizada do fluxo de ingestão (link) e expõe telemetria/comandos em ws://localhost:1880/ws."
+  },
+  {
+    "id": "spa_c1",
+    "type": "comment",
+    "z": "spa_tab",
+    "name": "TRILHO 1 — telemetria dos CLPs (vem da amostra normalizada, sem segundo s7 in)",
+    "info": "",
+    "x": 330,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "spa_li_amostra",
+    "type": "link in",
+    "z": "spa_tab",
+    "name": "amostra normalizada",
+    "links": [
+      "spa_lo_amostra"
+    ],
+    "x": 130,
+    "y": 90,
+    "wires": [
+      [
+        "spa_montar"
+      ]
+    ]
+  },
+  {
+    "id": "spa_montar",
+    "type": "function",
+    "z": "spa_tab",
+    "name": "montarTelemetria",
+    "func": "// Trilho 1: recebe a amostra normalizada (100 ms) do fluxo de ingestão e atualiza o contexto global.\n// NÃO publica: quem publica é o nó \"consolidar\" (uma mensagem única a cada 500 ms).\nconst s = msg.payload || {};\nconst st = s.stations || {};\nconst emergencia = s.buttons && s.buttons.emergency_pressed === true;\nconst flags = s.flags || {};\nconst pres = s.presence || {};\n\nconst telemetria = global.get('telemetria') || {\n    timestamp: new Date().toISOString(),\n    roboUR: { posicaoCartesiana: { x: 0, y: 0, z: 0 }, posicaoJuntas: [0, 0, 0, 0, 0, 0], garraFechada: false },\n    esteira: { motorLigado: false, pecaAtual: null },\n    estacoes: {\n        estoque: { status: 'AGUARDANDO', magazine: 0 }, processo: { status: 'AGUARDANDO', magazine: 0 },\n        montagem: { status: 'AGUARDANDO', magazine: 0 }, expedicao: { status: 'AGUARDANDO', magazine: 0 }\n    },\n    pedidoAtual: null\n};\n\n// Status do contrato (enum): EMERGENCIA > OPERANDO > AGUARDANDO.\n// \"segurancaOK = true\" é o estado NORMAL da estação, então não indica operação; usamos esteira/ocupado.\nfunction status(emerg, operando) { return emerg ? 'EMERGENCIA' : (operando ? 'OPERANDO' : 'AGUARDANDO'); }\nconst rodando = (e) => !!e && (e.esteira1 === true || e.esteira2 === true);\n\ntelemetria.estacoes.estoque   = { status: status(emergencia, flags.ocupado === true), magazine: 0 };\ntelemetria.estacoes.processo  = { status: status(emergencia, rodando(st.processo)),  magazine: 0 };\ntelemetria.estacoes.montagem  = { status: status(emergencia, rodando(st.montagem)),  magazine: 0 };\ntelemetria.estacoes.expedicao = { status: status(emergencia, rodando(st.expedicao)), magazine: 0 };\ntelemetria.esteira.motorLigado = s.belt_running === true;\n// magazine, robô (roboUR) e peça atual não existem no mapa de tags do CLP: ficam nos valores padrão.\n\ntelemetria.timestamp = new Date().toISOString();\nglobal.set('telemetria', telemetria);\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 90,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "spa_c2",
+    "type": "comment",
+    "z": "spa_tab",
+    "name": "TRILHO 2 — Elipse (ELIPSE_ENABLED=true e ELIPSE_URL na aba de ambiente)",
+    "info": "",
+    "x": 330,
+    "y": 150,
+    "wires": []
+  },
+  {
+    "id": "spa_inj_elipse",
+    "type": "inject",
+    "z": "spa_tab",
+    "name": "pulso Elipse 2s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "2",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 200,
+    "wires": [
+      [
+        "spa_gate_elipse"
+      ]
+    ]
+  },
+  {
+    "id": "spa_gate_elipse",
+    "type": "function",
+    "z": "spa_tab",
+    "name": "Elipse habilitado?",
+    "func": "// Só consulta o Elipse quando ELIPSE_ENABLED=true (evita erro de timeout no simulador).\nif (env.get('ELIPSE_ENABLED') !== 'true') { return null; }\nmsg.url = env.get('ELIPSE_URL') || 'http://192.168.150.200:4321/api/Events/order/current';\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 200,
+    "wires": [
+      [
+        "spa_http"
+      ]
+    ]
+  },
+  {
+    "id": "spa_http",
+    "type": "http request",
+    "z": "spa_tab",
+    "name": "consultar Elipse",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 560,
+    "y": 200,
+    "wires": [
+      [
+        "spa_gravar"
+      ]
+    ]
+  },
+  {
+    "id": "spa_gravar",
+    "type": "function",
+    "z": "spa_tab",
+    "name": "gravarPedido",
+    "func": "// Trilho 2: guarda o pedido atual no contexto global para o \"consolidar\" usar.\nconst telemetria = global.get('telemetria');\nif (!telemetria) return null;\nconst p = msg.payload;\nif (p && p.trackingCode) {\n    telemetria.pedidoAtual = { trackingCode: p.trackingCode, componentId: p.componentId, status: p.status || 'EM_PRODUCAO' };\n    global.set('telemetria', telemetria);\n}\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 760,
+    "y": 200,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "spa_catch_http",
+    "type": "catch",
+    "z": "spa_tab",
+    "name": "",
+    "scope": [
+      "spa_http"
+    ],
+    "uncaught": false,
+    "x": 560,
+    "y": 250,
+    "wires": [
+      [
+        "spa_status_http"
+      ]
+    ]
+  },
+  {
+    "id": "spa_status_http",
+    "type": "function",
+    "z": "spa_tab",
+    "name": "Elipse indisponível (ignora)",
+    "func": "node.status({fill:'yellow',shape:'ring',text:'Elipse sem resposta'});\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 790,
+    "y": 250,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "spa_c3",
+    "type": "comment",
+    "z": "spa_tab",
+    "name": "TRILHO 3 — comandos da SPA / painel de teste (ws://localhost:1880/ws)",
+    "info": "",
+    "x": 330,
+    "y": 310,
+    "wires": []
+  },
+  {
+    "id": "spa_ws_in",
+    "type": "websocket in",
+    "z": "spa_tab",
+    "name": "comandos da nuvem",
+    "server": "spa_ws_listener",
+    "client": "",
+    "x": 150,
+    "y": 360,
+    "wires": [
+      [
+        "spa_validar"
+      ]
+    ]
+  },
+  {
+    "id": "spa_validar",
+    "type": "function",
+    "z": "spa_tab",
+    "name": "validarComando",
+    "func": "// Trilho 3: filtra eco, valida ação, origem e token. Saída 1 = comando válido, saída 2 = ack de rejeição.\nif (typeof msg.payload === 'string') { try { msg.payload = JSON.parse(msg.payload); } catch (e) { return null; } }\nconst c = msg.payload;\nif (!c || typeof c !== 'object') { return null; }\nif (c.roboUR || c.tipo === 'ack') { return null; }   // eco de telemetria/ack\nif (!c.acao) { return null; }\n\nconst ACOES = ['START', 'STOP', 'RESET', 'EMERGENCY_STOP'];\nconst ORIGENS = ['unidade1-grupo1', 'unidade1-grupo2', 'unidade1-grupo3', 'unidade1-grupo4', 'unidade1-grupo5'];\nconst nack = (motivo) => ({ payload: { tipo: 'ack', acao: c.acao, origem: c.origem || null, id: c.id || null,\n    aceito: false, motivo: motivo, ts: new Date().toISOString() }, _session: msg._session });\n\nif (!ACOES.includes(c.acao)) { return [null, nack('ação desconhecida')]; }\n\n// EMERGENCY_STOP é sempre aceito: a segurança prevalece.\nif (c.acao !== 'EMERGENCY_STOP') {\n    if (!ORIGENS.includes(c.origem)) { node.warn('Comando rejeitado de origem: ' + c.origem); return [null, nack('origem não permitida')]; }\n    const token = env.get('WS_TOKEN');\n    if (token && c.token !== token) { node.warn('Token inválido de ' + c.origem); return [null, nack('token inválido')]; }\n}\nmsg.comando = c;\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 360,
+    "wires": [
+      [
+        "spa_switch"
+      ],
+      [
+        "spa_ws_ack"
+      ]
+    ]
+  },
+  {
+    "id": "spa_switch",
+    "type": "switch",
+    "z": "spa_tab",
+    "name": "rotear comando",
+    "property": "comando.acao",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "START",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "STOP",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "RESET",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "EMERGENCY_STOP",
+        "vt": "str"
+      }
+    ],
+    "checkall": "true",
+    "repair": false,
+    "outputs": 4,
+    "x": 540,
+    "y": 360,
+    "wires": [
+      [
+        "spa_aplicar"
+      ],
+      [
+        "spa_aplicar"
+      ],
+      [
+        "spa_aplicar"
+      ],
+      [
+        "spa_aplicar"
+      ]
+    ]
+  },
+  {
+    "id": "spa_aplicar",
+    "type": "function",
+    "z": "spa_tab",
+    "name": "aplicarComando",
+    "func": "// Aplica o comando. Saída 1 = simulador (link), saída 2 = ack para quem enviou.\n// Projeto é SOMENTE LEITURA no CLP (docs/mapeamento-clp.md): fora do SIMULADOR nada é escrito.\nconst c = msg.comando;\nconst modo = env.get('INPUT_MODE') || 'SIMULADOR';\nconst ack = (ok, motivo) => ({ payload: { tipo: 'ack', acao: c.acao, origem: c.origem || null, id: c.id || null,\n    aceito: ok, motivo: motivo || null, modo: modo, ts: new Date().toISOString() }, _session: msg._session });\n\nif (modo !== 'SIMULADOR') { return [null, ack(false, 'modo ' + modo + ': CLP somente leitura, comando não escrito')]; }\nconst MAP = { START: 'START', STOP: 'STOP', RESET: 'RESET', EMERGENCY_STOP: 'EMERGENCY' };\nreturn [{ topic: 'sim_cmd', payload: MAP[c.acao] }, ack(true)];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 740,
+    "y": 360,
+    "wires": [
+      [
+        "spa_lo_sim"
+      ],
+      [
+        "spa_ws_ack"
+      ]
+    ]
+  },
+  {
+    "id": "spa_lo_sim",
+    "type": "link out",
+    "z": "spa_tab",
+    "name": "→ simulador",
+    "mode": "link",
+    "links": [
+      "spa_li_sim"
+    ],
+    "x": 910,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "spa_ws_ack",
+    "type": "websocket out",
+    "z": "spa_tab",
+    "name": "ack (só para quem enviou)",
+    "server": "spa_ws_listener",
+    "client": "",
+    "x": 930,
+    "y": 400,
+    "wires": []
+  },
+  {
+    "id": "spa_debug",
+    "type": "debug",
+    "z": "spa_tab",
+    "name": "comandos recebidos",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "comando",
+    "targetType": "msg",
+    "x": 380,
+    "y": 410,
+    "wires": []
+  },
+  {
+    "id": "spa_c4",
+    "type": "comment",
+    "z": "spa_tab",
+    "name": "TRILHO 4 — publicação consolidada a cada 500 ms",
+    "info": "",
+    "x": 290,
+    "y": 470,
+    "wires": []
+  },
+  {
+    "id": "spa_inj_pub",
+    "type": "inject",
+    "z": "spa_tab",
+    "name": "publicar 500ms",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "0.5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1.5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 520,
+    "wires": [
+      [
+        "spa_consolidar"
+      ]
+    ]
+  },
+  {
+    "id": "spa_consolidar",
+    "type": "function",
+    "z": "spa_tab",
+    "name": "consolidar",
+    "func": "// Junta o estado global numa mensagem única e publica (broadcast para todos os clientes do /ws).\nconst telemetria = global.get('telemetria');\nif (!telemetria) { return null; }   // ainda sem leitura\ntelemetria.timestamp = new Date().toISOString();\nmsg.payload = telemetria;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 520,
+    "wires": [
+      [
+        "spa_ws_out"
+      ]
+    ]
+  },
+  {
+    "id": "spa_ws_out",
+    "type": "websocket out",
+    "z": "spa_tab",
+    "name": "publicar telemetria",
+    "server": "spa_ws_listener",
+    "client": "",
+    "x": 560,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "spa_ws_listener",
+    "type": "websocket-listener",
+    "path": "/ws",
+    "wholemsg": "false"
+  }
+]

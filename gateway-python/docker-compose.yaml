@@ -1,0 +1,46 @@
+# Ambiente de desenvolvimento SEM a bancada: tudo simulado.
+# Parte do Grupo 1: mosquitto, mock-plc, mock-ur e gateway.
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+
+  mock-plc:
+    build: ./docker/mock-plc
+    ports: ["4840:4840"]
+
+  mock-ur:
+    build: ./docker/mock-ur
+    ports: ["30004:30004"]
+
+  gateway:
+    build:
+      context: .
+      dockerfile: packages/gateway/Dockerfile
+    environment:
+      - OPCUA_ENDPOINT=opc.tcp://mock-plc:4840/n2/mock
+      - UR_HOST=mock-ur
+      - MQTT_URL=mqtt://mosquitto:1883
+      - UNIT_ID=UNIDADE-SP
+      - ASSET_ID=N2-001
+      - ORIGIN=simulado          # fonte é mock: NUNCA publicar como "medido"
+      - TAGMAP_PATH=/app/config/tagmap.mock.json
+      - UR_DECIMATION=1
+    volumes:
+      - gateway-buffer:/data     # buffer store-and-forward sobrevive a reinício
+    depends_on: [mosquitto, mock-plc, mock-ur]
+    restart: unless-stopped
+
+  # Backend é de outro grupo; descomente quando packages/backend existir.
+  # backend:
+  #   build: ./packages/backend
+  #   environment: [MQTT_URL=mqtt://mosquitto:1883, PORT=8080]
+  #   ports: ["8080:8080"]
+  #   depends_on: [mosquitto]
+
+volumes:
+  mosquitto-data:
+  gateway-buffer:

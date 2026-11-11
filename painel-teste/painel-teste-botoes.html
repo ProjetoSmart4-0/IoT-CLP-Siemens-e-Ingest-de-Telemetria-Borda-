@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de teste dos botões — Grupo 1</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--bd:#d9dde3;--ok:#16794c;--okbg:#e3f5ec;--er:#b42318;--erbg:#fdeceb;--wa:#8a5a00;--wabg:#fff3d6;--ac:#1d4ed8}
+@media (prefers-color-scheme:dark){:root{--bg:#14171c;--card:#1d2127;--tx:#e8eaed;--mut:#9aa3af;--bd:#343b45;--ok:#5ad19a;--okbg:#12342a;--er:#ff8a80;--erbg:#3a1b19;--wa:#f3c969;--wabg:#3a2f12;--ac:#7aa2ff}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:1100px;margin-inline:auto}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+.sub{color:var(--mut);margin:0 0 14px}.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+input[type=text]{flex:1;min-width:180px}
+button{font:inherit;padding:8px 14px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--ac)}button:disabled{opacity:.45;cursor:not-allowed}
+.cmd{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.cmd button{padding:14px;font-weight:600;position:relative}
+.b-start{background:#16794c;color:#fff;border-color:#16794c}.b-stop{background:#b42318;color:#fff;border-color:#b42318}
+.b-reset{background:#1d4ed8;color:#fff;border-color:#1d4ed8}.b-emg{background:#111;color:#ffd400;border-color:#ffd400}
+.chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bd);color:var(--tx);font-weight:500}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.er{background:var(--erbg);color:var(--er)}.chip.wa{background:var(--wabg);color:var(--wa)}
+.st{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.s{border:1px solid var(--bd);border-radius:8px;padding:8px}
+.s b{display:block;font-size:12px;color:var(--mut);text-transform:uppercase}.s span{font-weight:700}
+.OPERANDO{color:var(--ok)}.EMERGENCIA{color:var(--er)}.AGUARDANDO{color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--bd);vertical-align:top}th{color:var(--mut);font-weight:500;font-size:12px}
+#log{height:220px;overflow:auto;font:12px/1.5 ui-monospace,Consolas,monospace;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px;white-space:pre-wrap}
+.note{font-size:13px;color:var(--mut)}.full{grid-column:1/-1}
+</style>
+</head>
+<body>
+<h1>Painel de teste dos botões</h1>
+<p class="sub">Envia START, STOP, RESET e EMERGENCY_STOP pelo WebSocket e confere se o <b>ack</b> volta e se a <b>telemetria</b> muda de verdade.</p>
+
+<div class="grid">
+<div class="card">
+  <h2>1. Conexão</h2>
+  <div class="row"><input type="text" id="url" value="ws://localhost:1880/ws" aria-label="URL do WebSocket"></div>
+  <div class="row">
+    <label>Origem <select id="origem"></select></label>
+    <input type="text" id="token" placeholder="token (só se WS_TOKEN estiver ativo)" style="max-width:240px">
+  </div>
+  <div class="row">
+    <button id="bConn">Conectar ao Node-RED</button>
+    <button id="bDemo">Usar demonstração local</button>
+    <button id="bDisc" disabled>Desconectar</button>
+  </div>
+  <div class="row"><span class="chip" id="cConn">desconectado</span> <span class="chip" id="cModo">modo: ?</span> <span class="chip" id="cAge">sem telemetria</span></div>
+  <p class="note">“Demonstração local” roda um simulador dentro da página, só para ver o painel funcionando sem Node-RED. Para testar o fluxo de verdade, use Conectar.</p>
+</div>
+
+<div class="card">
+  <h2>2. Botões</h2>
+  <div class="cmd">
+    <button class="b-start" data-a="START" disabled>START</button>
+    <button class="b-stop" data-a="STOP" disabled>STOP</button>
+    <button class="b-reset" data-a="RESET" disabled>RESET</button>
+    <button class="b-emg" data-a="EMERGENCY_STOP" disabled>EMERGENCY_STOP</button>
+  </div>
+  <div class="row" style="margin-top:10px"><button id="bBad" disabled>Enviar com origem inválida (deve ser rejeitado)</button></div>
+  <p class="note">Em modo CLP o fluxo é somente leitura: o ack volta com <i>aceito = false</i> e nada é escrito na bancada. Isso é o esperado.</p>
+</div>
+
+<div class="card">
+  <h2>3. Telemetria ao vivo</h2>
+  <div class="st" id="st"></div>
+  <p class="note" id="tl" style="margin-top:8px">esteira: — · pedido: —</p>
+</div>
+
+<div class="card">
+  <h2>4. Teste automático</h2>
+  <div class="row"><button id="bRun" disabled>Rodar teste completo</button><span class="chip" id="cRun">parado</span></div>
+  <p class="note">Sequência: START → STOP → EMERGENCY_STOP → RESET → origem inválida. Cada passo precisa de ack em até 3 s e do efeito esperado na telemetria em até 5 s.</p>
+</div>
+
+<div class="card full">
+  <h2>Resultados</h2>
+  <table><thead><tr><th>Botão</th><th>Ack</th><th>Efeito na telemetria</th><th>Veredito</th></tr></thead><tbody id="res"></tbody></table>
+</div>
+<div class="card full"><h2>Log</h2><div id="log"></div></div>
+</div>
+
+<script>
+const ORIGENS=['unidade1-grupo1','unidade1-grupo2','unidade1-grupo3','unidade1-grupo4','unidade1-grupo5'];
+const $=id=>document.getElementById(id);
+ORIGENS.forEach(o=>$('origem').add(new Option(o,o)));
+const ESTACOES=['estoque','processo','montagem','expedicao'];
+const ESPERA={START:t=>t.esteira.motorLigado===true&&['processo','montagem','expedicao'].every(k=>t.estacoes[k].status==='OPERANDO'),
+  STOP:t=>t.esteira.motorLigado===false&&ESTACOES.every(k=>t.estacoes[k].status==='AGUARDANDO'),
+  EMERGENCY_STOP:t=>ESTACOES.every(k=>t.estacoes[k].status==='EMERGENCIA'),
+  RESET:t=>ESTACOES.every(k=>t.estacoes[k].status!=='EMERGENCIA')};
+const TXT={START:'esteira ligada e estações OPERANDO',STOP:'esteira parada e estações AGUARDANDO',EMERGENCY_STOP:'todas as estações em EMERGENCIA',RESET:'nenhuma estação em EMERGENCIA'};
+
+let transport=null,ultima=null,ultimaTs=0,pend=new Map(),seq=0,rodando=false,modoRemoto='?';
+function log(m,k=''){const l=$('log');l.textContent+=new Date().toLocaleTimeString()+' '+(k?k+' ':'')+m+'\n';l.scrollTop=l.scrollHeight}
+function chip(el,txt,cls){el.textContent=txt;el.className='chip '+(cls||'')}
+function habilita(on){document.querySelectorAll('[data-a]').forEach(b=>b.disabled=!on||rodando);$('bBad').disabled=!on||rodando;$('bRun').disabled=!on||rodando;$('bDisc').disabled=!on;$('bConn').disabled=on;$('bDemo').disabled=on}
+
+function renderTel(t){
+  $('st').innerHTML=ESTACOES.map(k=>`<div class="s"><b>${k}</b><span class="${t.estacoes[k].status}">${t.estacoes[k].status}</span></div>`).join('');
+  $('tl').textContent='esteira: '+(t.esteira.motorLigado?'LIGADA':'parada')+' · pedido: '+(t.pedidoAtual?t.pedidoAtual.trackingCode+' ('+t.pedidoAtual.status+')':'—');
+}
+function onMsg(raw){
+  let m;try{m=typeof raw==='string'?JSON.parse(raw):raw}catch{return log('mensagem inválida: '+raw,'⚠')}
+  if(m.tipo==='ack'){
+    if(m.modo){modoRemoto=m.modo;chip($('cModo'),'modo: '+m.modo,m.modo==='SIMULADOR'?'ok':'wa')}
+    log('ack '+m.acao+' aceito='+m.aceito+(m.motivo?' ('+m.motivo+')':''),'←');
+    const p=m.id&&pend.get(m.id);if(p){clearTimeout(p.to);pend.delete(m.id);p.res(m)}return}
+  if(m.estacoes&&m.esteira){ultima=m;ultimaTs=Date.now();renderTel(m)}
+}
+setInterval(()=>{if(!ultimaTs)return;const s=((Date.now()-ultimaTs)/1000);chip($('cAge'),'telemetria há '+s.toFixed(1)+' s',s<2?'ok':'er')},300);
+
+function enviar(acao,origem,extra){
+  const id='t'+(++seq);const c={acao,origem:origem===undefined?$('origem').value:origem,id};
+  if($('token').value)c.token=$('token').value;Object.assign(c,extra||{});
+  log(JSON.stringify(c),'→');
+  return new Promise(res=>{const to=setTimeout(()=>{pend.delete(id);res(null)},3000);pend.set(id,{res,to});transport.send(c)});
+}
+function esperaTel(pred,ms=5000){return new Promise(res=>{const t0=Date.now();(function f(){if(ultima&&pred(ultima))return res(true);if(Date.now()-t0>ms)return res(false);setTimeout(f,100)})()})}
+
+function linha(nome){const tr=document.createElement('tr');tr.innerHTML='<td>'+nome+'</td><td>…</td><td>…</td><td><span class="chip">em andamento</span></td>';$('res').prepend(tr);return tr}
+function fecha(tr,ack,efeito,v,cls){const td=tr.children;td[1].textContent=ack;td[2].textContent=efeito;td[3].innerHTML='<span class="chip '+cls+'">'+v+'</span>'}
+
+async function testaBotao(acao,tr){
+  tr=tr||linha(acao);const ack=await enviar(acao);
+  if(!ack){fecha(tr,'sem ack em 3 s','—','FALHA','er');return false}
+  if(!ack.aceito){
+    const esperado=ack.modo&&ack.modo!=='SIMULADOR';
+    fecha(tr,'recusado: '+ack.motivo,'não verificado',esperado?'OK (CLP somente leitura)':'FALHA',esperado?'wa':'er');return esperado}
+  const ok=await esperaTel(ESPERA[acao]);
+  fecha(tr,'aceito',ok?TXT[acao]:'esperado: '+TXT[acao]+' (não ocorreu em 5 s)',ok?'OK':'FALHA',ok?'ok':'er');return ok;
+}
+async function testaOrigemInvalida(tr){
+  tr=tr||linha('START com origem inválida');const ack=await enviar('START','hacker');
+  if(!ack){fecha(tr,'sem ack em 3 s','—','FALHA','er');return false}
+  const ok=ack.aceito===false;fecha(tr,ok?'recusado: '+ack.motivo:'ACEITO (errado!)','—',ok?'OK':'FALHA',ok?'ok':'er');return ok;
+}
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{habilita(false);await testaBotao(b.dataset.a);habilita(true)});
+$('bBad').onclick=async()=>{habilita(false);await testaOrigemInvalida();habilita(true)};
+$('bRun').onclick=async()=>{
+  if(modoRemoto!=='?'&&modoRemoto!=='SIMULADOR'&&!confirm('Modo '+modoRemoto+': o fluxo não escreve no CLP, então os comandos serão recusados. Continuar?'))return;
+  rodando=true;habilita(true);chip($('cRun'),'rodando…','wa');let falhas=0;
+  for(const a of ['START','STOP','EMERGENCY_STOP','RESET']){if(!await testaBotao(a))falhas++}
+  if(!await testaOrigemInvalida())falhas++;
+  rodando=false;habilita(true);chip($('cRun'),falhas?falhas+' falha(s)':'tudo OK',falhas?'er':'ok');
+};
+
+function iniciaTransporte(t,rotulo){transport=t;habilita(true);chip($('cConn'),rotulo,'ok');pend.clear()}
+function encerra(){transport&&transport.close&&transport.close();transport=null;ultimaTs=0;ultima=null;habilita(false);chip($('cConn'),'desconectado','');chip($('cAge'),'sem telemetria','');chip($('cModo'),'modo: ?','');modoRemoto='?'}
+$('bDisc').onclick=encerra;
+$('bConn').onclick=()=>{
+  let ws;try{ws=new WebSocket($('url').value)}catch(e){return log('URL inválida: '+e.message,'⚠')}
+  chip($('cConn'),'conectando…','wa');
+  ws.onopen=()=>{log('conectado a '+ws.url,'✔');iniciaTransporte({send:c=>ws.send(JSON.stringify(c)),close:()=>ws.close()},'conectado ao Node-RED')};
+  ws.onmessage=e=>onMsg(e.data);
+  ws.onerror=()=>log('erro de conexão. Node-RED rodando? Fluxo implantado? Caminho /ws?','⚠');
+  ws.onclose=()=>{if(transport){log('conexão encerrada','⚠');encerra()}else chip($('cConn'),'falhou','er')};
+};
+
+// ---- Demonstração local: replica o protocolo do fluxo (ack + telemetria a cada 500 ms) ----
+$('bDemo').onclick=()=>{
+  const S={run:false,emg:false};
+  const tel=()=>{const op=S.run&&!S.emg,e=S.emg;const stt=o=>e?'EMERGENCIA':(o?'OPERANDO':'AGUARDANDO');
+    return{timestamp:new Date().toISOString(),roboUR:{},esteira:{motorLigado:op,pecaAtual:null},
+      estacoes:{estoque:{status:stt(op)},processo:{status:stt(op)},montagem:{status:stt(op)},expedicao:{status:stt(op)}},pedidoAtual:null}};
+  const iv=setInterval(()=>onMsg(tel()),500);
+  const t={close:()=>clearInterval(iv),send:c=>setTimeout(()=>{
+    const a={tipo:'ack',acao:c.acao,origem:c.origem,id:c.id,modo:'SIMULADOR',ts:new Date().toISOString()};
+    if(c.acao!=='EMERGENCY_STOP'&&!ORIGENS.includes(c.origem)){a.aceito=false;a.motivo='origem não permitida'}
+    else{a.aceito=true;if(c.acao==='START'&&!S.emg)S.run=true;if(c.acao==='STOP')S.run=false;
+      if(c.acao==='EMERGENCY_STOP'){S.run=false;S.emg=true}if(c.acao==='RESET')S.emg=false}
+    onMsg(a);if(a.aceito)onMsg(tel())},50)};
+  log('demonstração local iniciada (nada é enviado ao Node-RED)','ℹ');iniciaTransporte(t,'demonstração local');
+};
+renderTel({estacoes:{estoque:{status:'—'},processo:{status:'—'},montagem:{status:'—'},expedicao:{status:'—'}},esteira:{},pedidoAtual:null});
+</script>
+</body>
+</html>

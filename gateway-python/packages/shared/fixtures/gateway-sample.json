@@ -1,0 +1,189 @@
+[
+  {
+    "schema_version": "1.0",
+    "message_id": "N2-001:plc:fixture:0",
+    "unit_id": "UNIDADE-SP",
+    "asset_id": "N2-001",
+    "tag": "machine.state",
+    "value": "executando",
+    "value_type": "string",
+    "unit": null,
+    "origin": "simulado",
+    "timestamps": {
+      "source_utc": "2026-11-03T23:20:47.186Z",
+      "gateway_utc": "2026-11-03T23:20:47.186Z",
+      "ingest_utc": null,
+      "emitted_utc": null,
+      "source_uptime_s": null
+    },
+    "quality": {
+      "status": "GOOD",
+      "source_code": "Good",
+      "reason": null
+    },
+    "stream_id": "N2-001:plc:fixture",
+    "seq": 0,
+    "context": {
+      "map_version": "mock-1",
+      "component_id": "plc",
+      "raw_value": 2
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "message_id": "N2-001:plc:fixture:1",
+    "unit_id": "UNIDADE-SP",
+    "asset_id": "N2-001",
+    "tag": "machine.part_present",
+    "value": true,
+    "value_type": "bool",
+    "unit": null,
+    "origin": "simulado",
+    "timestamps": {
+      "source_utc": "2026-11-03T23:20:47.186Z",
+      "gateway_utc": "2026-11-03T23:20:47.186Z",
+      "ingest_utc": null,
+      "emitted_utc": null,
+      "source_uptime_s": null
+    },
+    "quality": {
+      "status": "GOOD",
+      "source_code": "Good",
+      "reason": null
+    },
+    "stream_id": "N2-001:plc:fixture",
+    "seq": 1,
+    "context": {
+      "map_version": "mock-1",
+      "component_id": "plc"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "message_id": "N2-001:plc:fixture:2",
+    "unit_id": "UNIDADE-SP",
+    "asset_id": "N2-001",
+    "tag": "machine.state",
+    "value": null,
+    "value_type": "string",
+    "unit": null,
+    "origin": "simulado",
+    "timestamps": {
+      "source_utc": null,
+      "gateway_utc": "2026-11-03T23:20:47.186Z",
+      "ingest_utc": null,
+      "emitted_utc": null,
+      "source_uptime_s": null
+    },
+    "quality": {
+      "status": "BAD",
+      "source_code": "BadNotConnected",
+      "reason": "sessão OPC UA perdida"
+    },
+    "stream_id": "N2-001:plc:fixture",
+    "seq": 2,
+    "context": {
+      "map_version": "mock-1",
+      "component_id": "plc"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "message_id": "N2-001:ur:fixture:0",
+    "unit_id": "UNIDADE-SP",
+    "asset_id": "N2-001",
+    "tag": "robot.joint_position",
+    "value": [
+      0.0,
+      -1.2,
+      1.4,
+      -1.7,
+      0.9,
+      0.0
+    ],
+    "value_type": "float64[6]",
+    "unit": "rad",
+    "origin": "simulado",
+    "timestamps": {
+      "source_utc": null,
+      "gateway_utc": "2026-11-03T23:20:47.186Z",
+      "ingest_utc": null,
+      "emitted_utc": null,
+      "source_uptime_s": 12.3
+    },
+    "quality": {
+      "status": "GOOD",
+      "source_code": "Good",
+      "reason": null
+    },
+    "stream_id": "N2-001:ur:fixture",
+    "seq": 0,
+    "context": {
+      "map_version": "mock-1",
+      "component_id": "ur3e"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "message_id": "N2-001:ur:fixture:1",
+    "unit_id": "UNIDADE-SP",
+    "asset_id": "N2-001",
+    "tag": "robot.runtime_state",
+    "value": "executando",
+    "value_type": "string",
+    "unit": null,
+    "origin": "simulado",
+    "timestamps": {
+      "source_utc": null,
+      "gateway_utc": "2026-11-03T23:20:47.186Z",
+      "ingest_utc": null,
+      "emitted_utc": null,
+      "source_uptime_s": null
+    },
+    "quality": {
+      "status": "GOOD",
+      "source_code": "Good",
+      "reason": null
+    },
+    "stream_id": "N2-001:ur:fixture",
+    "seq": 1,
+    "context": {
+      "map_version": "mock-1",
+      "component_id": "ur3e",
+      "raw_value": 2
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "message_id": "N2-001:gateway:fixture:0",
+    "unit_id": "UNIDADE-SP",
+    "asset_id": "N2-001",
+    "tag": "gateway.status",
+    "value": "online",
+    "value_type": "string",
+    "unit": null,
+    "origin": "calculado",
+    "timestamps": {
+      "source_utc": null,
+      "gateway_utc": "2026-11-03T23:20:47.186Z",
+      "ingest_utc": null,
+      "emitted_utc": null,
+      "source_uptime_s": null
+    },
+    "quality": {
+      "status": "GOOD",
+      "source_code": "Good",
+      "reason": null
+    },
+    "stream_id": "N2-001:gateway:fixture",
+    "seq": 0,
+    "context": {
+      "map_version": "mock-1",
+      "component_id": "gateway",
+      "plc_connected": true,
+      "mqtt_connected": true,
+      "buffer_pending": 0,
+      "buffer_dropped": 0
+    }
+  }
+]

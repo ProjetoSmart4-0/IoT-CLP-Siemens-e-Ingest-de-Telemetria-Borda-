@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.1",
+  "msg_id": "SMART-40-PLANTA-N2-1793751336029-17-n1sfug",
+  "machine_id": "SMART-40-PLANTA-N2",
+  "timestamp": "2026-11-04T00:15:36.029Z",
+  "seq": 17,
+  "event": "PERIODIC",
+  "source": "SIMULATOR",
+  "buffered": true,
+  "machine_state": "RUNNING",
+  "belt_running": true,
+  "belt_speed": null,
+  "belt_speed_source": "UNAVAILABLE",
+  "buttons": {
+    "start_pressed": false,
+    "stop_pressed": false,
+    "emergency_pressed": false,
+    "reset_pressed": false
+  },
+  "stations": {
+    "processo": {
+      "seguranca_ok": true,
+      "automatico": true,
+      "botao_verde": false,
+      "botao_vermelho": false,
+      "esteira1": true,
+      "esteira2": true
+    },
+    "montagem": {
+      "seguranca_ok": true,
+      "automatico": true,
+      "botao_verde": false,
+      "botao_vermelho": false,
+      "esteira1": true,
+      "esteira2": true
+    },
+    "expedicao": {
+      "seguranca_ok": true,
+      "automatico": true,
+      "botao_verde": false,
+      "botao_vermelho": false,
+      "esteira1": true,
+      "esteira2": true
+    }
+  },
+  "flags": {
+    "ocupado": true,
+    "aguardando": false,
+    "manual": false,
+    "comutador_automatico": true,
+    "condicao_iniciar": true
+  },
+  "presence": {
+    "montagem": true,
+    "expedicao": false
+  },
+  "numero_op": 1,
+  "aggregation": {
+    "window_ms": 500,
+    "samples": 5,
+    "window_start": "2026-11-04T00:15:35.627Z",
+    "window_end": "2026-11-04T00:15:36.029Z",
+    "belt_running_ratio": 1,
+    "states_seen": [
+      "RUNNING"
+    ],
+    "state_changes": 0
+  }
+}
