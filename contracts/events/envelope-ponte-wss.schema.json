@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:smart40:planta-n2:grupo1:envelope-telemetria-1.0",
+  "title": "Envelope de telemetria da ponte borda-nuvem (Grupo 1, Sprint 3)",
+  "description": "Publicado a cada 500 ms em wss://smart40-broker.onrender.com. Campos do contrato + bloco meta (PROPOSTA D-G1-13, aguardando o G5). Consumidores deduplicam por meta.msg_id.",
+  "type": "object",
+  "required": ["timestamp", "roboUR", "esteira", "estacoes", "pedidoAtual", "meta"],
+  "properties": {
+    "timestamp": { "type": "string", "format": "date-time", "description": "UTC ISO-8601 com Z: momento da consolidação da janela" },
+    "roboUR": {
+      "type": "object", "required": ["posicaoCartesiana", "posicaoJuntas", "garraFechada"],
+      "properties": {
+        "posicaoCartesiana": { "type": "object", "required": ["x", "y", "z"],
+          "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "z": { "type": "number" } } },
+        "posicaoJuntas": { "type": "array", "items": { "type": "number" }, "minItems": 6, "maxItems": 6 },
+        "garraFechada": { "type": "boolean" }
+      }
+    },
+    "esteira": { "type": "object", "required": ["motorLigado", "pecaAtual"],
+      "properties": { "motorLigado": { "type": "boolean" }, "pecaAtual": {} } },
+    "estacoes": {
+      "type": "object", "required": ["estoque", "processo", "montagem", "expedicao"],
+      "additionalProperties": { "$ref": "#/$defs/estacao" },
+      "properties": { "estoque": { "$ref": "#/$defs/estacao" }, "processo": { "$ref": "#/$defs/estacao" },
+                      "montagem": { "$ref": "#/$defs/estacao" }, "expedicao": { "$ref": "#/$defs/estacao" } }
+    },
+    "pedidoAtual": { "type": ["object", "null"] },
+    "meta": {
+      "type": "object", "required": ["contrato", "node_id", "msg_id", "boot", "seq", "stale", "buffered"],
+      "properties": {
+        "contrato": { "const": "envelope-telemetria-1.0" },
+        "node_id": { "type": "string" },
+        "msg_id": { "type": "string" },
+        "boot": { "type": "string", "format": "date-time" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "origem_dados": { "enum": ["PLC", "SIMULATOR", "REPLAY", "TESTE_B", null] },
+        "amostras": { "type": "integer", "minimum": 0 },
+        "stale": { "type": "boolean" },
+        "buffered": { "type": "boolean" },
+        "reenvio": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "estacao": { "type": "object", "required": ["status", "magazine"],
+      "properties": { "status": { "enum": ["AGUARDANDO", "OPERANDO", "EMERGENCIA"] }, "magazine": { "type": "number" } } }
+  }
+}

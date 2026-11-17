@@ -1,0 +1,14 @@
+{
+  "name": "grupo1-tools",
+  "private": true,
+  "description": "Ferramentas de teste da ponte borda-nuvem (Sprint 3). Node.js >= 22.13.",
+  "scripts": {
+    "broker-local": "node mock-broker-smart40.js",
+    "ensaio": "node ensaio-ponte-local.js",
+    "segredos": "node verificar-segredos.js --historico"
+  },
+  "dependencies": {
+    "selfsigned": "^2.4.1",
+    "ws": "8.18.0"
+  }
+}

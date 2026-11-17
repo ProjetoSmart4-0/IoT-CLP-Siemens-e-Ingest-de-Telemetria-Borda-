@@ -1,7 +1,7 @@
 # Ambiente local do Grupo 1:  docker compose up -d --build
-#   Node-RED .......... http://localhost:1880   (importe node-red/flow_ingestao_n2.json — Sprint 2)
+#   Node-RED .......... http://localhost:1880   (importe node-red/flow_ingestao_n2.json — Sprints 2 e 3)
 #   iot-service ....... http://localhost:8080/docs
-#   Postgres .......... localhost:5432  (admin_40 / senha_segura_40)
+#   Postgres .......... localhost:5432  (usuário/senha do arquivo .env — copie .env.example)
 #   Mosquitto (teste).. localhost:1883  -> docker compose --profile broker-local up -d
 services:
   postgres:
@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: industria40_db
       POSTGRES_USER: admin_40
-      POSTGRES_PASSWORD: senha_segura_40
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env (copie .env.example)}
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -25,7 +25,7 @@ services:
     build: ./iot-service
     env_file: ./iot-service/.env
     environment:
-      DATABASE_URL: postgresql://admin_40:senha_segura_40@postgres:5432/industria40_db
+      DATABASE_URL: postgresql://admin_40:${POSTGRES_PASSWORD}@postgres:5432/industria40_db
     ports: ["8080:8080"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -34,10 +34,13 @@ services:
     build: ./node-red
     environment:
       TZ: America/Sao_Paulo
-      NODE_RED_CREDENTIAL_SECRET: troque-esta-chave-grupo1
+      NODE_RED_CREDENTIAL_SECRET: ${NODE_RED_CREDENTIAL_SECRET:?defina no .env (copie .env.example)}
       NODE_OPTIONS: --tls-min-v1.3                      # MQTTS só com TLS 1.3 (HiveMQ Cloud)
       OUTBOX_PATH: /data/outbox_n2.sqlite               # outbox SQLite no volume (sobrevive a reinício)
       CAPTURE_FILE: /data/captures/captura-n2.jsonl
+      PONTE_OUTBOX_PATH: /data/outbox_ponte_wss.sqlite         # Sprint 3: outbox da ponte WSS
+      SMART40_BROKER_URL: ${SMART40_BROKER_URL:-}               # wss://... (sem token)
+      SMART40_AGENT_TOKEN: ${SMART40_AGENT_TOKEN:-}             # token do agente (só no .env)
     ports: ["1880:1880"]
     volumes:
       - nodered_data:/data

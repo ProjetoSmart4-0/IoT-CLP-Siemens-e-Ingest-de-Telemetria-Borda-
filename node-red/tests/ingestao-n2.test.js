@@ -150,8 +150,25 @@ const [, cap] = fonte.run({ payload: { emergencia: false } });
 assert.strictEqual(JSON.parse(cap.payload).source, "PLC"); assert.strictEqual(cap.filename, "cap.jsonl");
 console.log("ok  CAPTURE=true grava a leitura do CLP em JSONL para o replay");
 
-// ---------- somente leitura ----------
-assert.ok(!FLOW.some(n => n.type === "s7 out"), "fluxo não pode ter s7 out");
+// ---------- aba de ingestão é somente leitura (escrita só na aba de comandos, Sprint 3) ----------
+const ING_TAB = "b6a3277f0d94318e";
+assert.ok(!FLOW.some(n => n.type === "s7 out" && n.z === ING_TAB), "a aba de ingestão não pode ter s7 out");
+const leitura = FLOW.find(n => n.type === "s7 endpoint" && /somente leitura/.test(n.name));
+assert.ok(!FLOW.some(n => n.type === "s7 out" && n.endpoint === leitura.id), "nenhum s7 out no endpoint de leitura");
 assert.ok(!FLOW.some(n => n.type === "s7 endpoint" && JSON.stringify(n).match(/password/i)));
-console.log("ok  fluxo somente leitura (nenhum nó s7 out)");
+console.log("ok  aba de ingestão somente leitura (nenhum s7 out; endpoint de leitura sem escrita)");
+
+// ---------- Teste B (Sprint 3): payload sintético substitui o s7 in ----------
+ENV.INPUT_MODE = "TESTE_B"; ENV.CAPTURE = "false";
+const injB = FLOW.find(n => n.type === "inject" && /TESTE B/.test(n.name));
+const pB = JSON.parse(injB.payload);
+assert.deepStrictEqual(pB, { statusEstoqueOk: true, emergenciaEstoque: false, motorEsteira1: true, posEstoque: 5 });
+assert.strictEqual(fonte.run({ payload: pB, source: "PLC" }), null, "em TESTE_B o s7 in real é ignorado");
+const [mB] = fonte.run({ payload: pB, source: "TESTE_B" });
+const aB = norm.run(mB).payload;
+assert.strictEqual(aB.source, "TESTE_B"); assert.strictEqual(aB.belt_running, true);
+assert.strictEqual(aB.machine_state, "RUNNING"); assert.strictEqual(aB.estoque.posicao, 5);
+assert.strictEqual(norm.run({ payload: { emergenciaEstoque: true }, source: "TESTE_B" }).payload.machine_state, "EMERGENCY");
+assert.strictEqual(norm.run({ payload: { statusEstoqueOk: false }, source: "TESTE_B" }).payload.machine_state, "ALARM");
+console.log("ok  Teste B: payload sintético entra no lugar do s7 in (RUNNING, posEstoque 5, emergência e alarme)");
 console.log("\nTODOS OS TESTES DO flow_ingestao_n2.json PASSARAM");

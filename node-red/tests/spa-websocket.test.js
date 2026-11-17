@@ -1,10 +1,12 @@
-// Testes do flow_spa_websocket.json — sem Node-RED, sem CLP, sem broker.
+// Testes da aba "Comandos e SPA local" (dentro do flow_ingestao_n2.json consolidado) — sem Node-RED, sem CLP, sem broker.
 // Roda o código dos nós "function" direto do JSON, encadeado com o simulador do fluxo de ingestão.
 // Rodar (raiz do projeto):  node node-red/tests/spa-websocket.test.js
 const fs = require("fs"), path = require("path"), assert = require("assert");
 const ROOT = path.join(__dirname, "..");
-const ING = JSON.parse(fs.readFileSync(path.join(ROOT, "flow_ingestao_n2.json"), "utf8"));
-const SPA = JSON.parse(fs.readFileSync(path.join(ROOT, "flow_spa_websocket.json"), "utf8"));
+const ALL = JSON.parse(fs.readFileSync(path.join(ROOT, "flow_ingestao_n2.json"), "utf8"));
+const ING = ALL.filter(n => n.z === "b6a3277f0d94318e" || (!n.z && n.type !== "tab" && n.id !== "spa_ws_listener" && n.id !== "s3_s7_cmd_endpoint") || n.id === "b6a3277f0d94318e");
+const SPA = ALL.filter(n => n.z === "spa_tab" || n.id === "spa_tab" || n.id === "spa_ws_listener");
+const OUTRAS = ALL.filter(n => !ING.includes(n) && !SPA.includes(n));
 const ENV = { INPUT_MODE: "SIMULADOR" }; const G = {};
 function mk(flow, name) {
     const n = flow.find(x => x.type === "function" && x.name === name); if (!n) throw new Error("Nó não encontrado: " + name);
@@ -64,9 +66,9 @@ assert.ok(comando({ acao: "START", origem: O, token: "segredo" }).ack.aceito);
 assert.ok(comando({ acao: "EMERGENCY_STOP" }).ack.aceito); delete ENV.WS_TOKEN;
 console.log("ok  WS_TOKEN opcional (E-Stop continua sempre aceito)");
 
-ENV.INPUT_MODE = "CLP"; r = comando({ acao: "START", origem: O });
-assert.strictEqual(r.ack.aceito, false); assert.strictEqual(r.sim, null); assert.match(r.ack.motivo, /somente leitura/);
-ENV.INPUT_MODE = "SIMULADOR"; console.log("ok  modo CLP: nada é escrito, ack aceito=false");
+G.input_mode_ingestao = "CLP"; r = comando({ acao: "START", origem: O });
+assert.strictEqual(r.ack.aceito, false); assert.strictEqual(r.sim, null); assert.match(r.ack.motivo, /autorização escrita/);
+G.input_mode_ingestao = "SIMULADOR"; console.log("ok  modo CLP sem autorização escrita: nada é escrito, ack aceito=false");
 
 const antes = pub().pedidoAtual; gravar.run({ payload: { trackingCode: "OP7", componentId: 2 } });
 assert.strictEqual(pub().pedidoAtual.trackingCode, "OP7"); assert.strictEqual(antes, null); console.log("ok  pedido do Elipse entra na telemetria");
@@ -77,9 +79,11 @@ const t = pub(); for (const k of ["timestamp", "roboUR", "esteira", "estacoes", 
 assert.deepStrictEqual(Object.keys(t.estacoes).sort(), ["estoque", "expedicao", "montagem", "processo"]);
 console.log("ok  contrato da telemetria completo (4 estações)");
 
-const ids = new Set([...ING, ...SPA].map(n => n.id)); assert.strictEqual(ids.size, ING.length + SPA.length, "ids duplicados");
-for (const n of SPA) { for (const w of (n.wires || []).flat()) assert.ok(ids.has(w), "wire órfão " + w); for (const l of (n.links || [])) assert.ok(ids.has(l), "link órfão " + l); }
+const ids = new Set(ALL.map(n => n.id)); assert.strictEqual(ids.size, ALL.length, "ids duplicados");
+for (const n of ALL) { for (const w of (n.wires || []).flat()) assert.ok(ids.has(w), "wire órfão " + w); for (const l of (n.links || [])) assert.ok(ids.has(l), "link órfão " + l); }
 const lo = ING.find(n => n.id === "spa_lo_amostra"), li = SPA.find(n => n.id === "spa_li_amostra");
-assert.ok(lo.links.includes(li.id) && li.links.includes(lo.id)); assert.ok(!SPA.concat(ING).some(n => n.type === "s7 out"));
-console.log("ok  links entre as abas íntegros, sem wires órfãos, sem s7 out");
-console.log("\nTODOS OS TESTES DO flow_spa_websocket.json PASSARAM");
+assert.ok(lo.links.includes(li.id) && li.links.includes(lo.id));
+const s7out = ALL.filter(n => n.type === "s7 out");
+assert.strictEqual(s7out.length, 4); assert.ok(s7out.every(n => n.endpoint === "s3_s7_cmd_endpoint"));
+console.log("ok  links entre as abas íntegros, sem wires órfãos; os 4 s7 out só escrevem no endpoint de comandos");
+console.log("\nTODOS OS TESTES DA ABA DE COMANDOS E SPA LOCAL PASSARAM");

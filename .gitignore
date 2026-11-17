@@ -12,3 +12,9 @@ context/
 outbox_n2.sqlite*
 *.sqlite-wal
 *.sqlite-shm
+
+# Sprint 3
+outbox_ponte_wss.sqlite*
+tools/node_modules/
+tools/.mock-broker/
+.env

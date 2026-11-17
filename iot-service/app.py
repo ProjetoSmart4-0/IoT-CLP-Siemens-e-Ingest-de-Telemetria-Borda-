@@ -47,7 +47,7 @@ log = logging.getLogger("iot-service")
 # =============================================================================
 # CONFIGURAÇÃO (tudo via variáveis de ambiente — nunca coloque segredos no código)
 # =============================================================================
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin_40:senha_segura_40@localhost:5432/industria40_db")
+DATABASE_URL = os.getenv("DATABASE_URL", "")          # obrigatório fora dos testes (Neon ou Postgres local via .env)
 AUTH_ENABLED = os.getenv("AUTH_ENABLED", "true").lower() == "true"
 JWT_SECRET = os.getenv("JWT_SECRET", "")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
@@ -322,6 +322,8 @@ def require_ingest_key(x_api_key: Optional[str] = Header(None)) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if getattr(app.state, "repo", None) is None:      # testes podem injetar um repositório falso
+        if not DATABASE_URL:
+            raise RuntimeError("DATABASE_URL não definida (veja iot-service/.env.example)")
         app.state.repo = PostgresRepository(DATABASE_URL)
     app.state.mqtt = None
     if MQTT_SUBSCRIBE:

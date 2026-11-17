@@ -1,0 +1,21 @@
+name: grupo1-sprint3
+on: [push, pull_request]
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }          # histórico completo para a verificação de segredos
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Testes do fluxo Node-RED (ingestão, comandos, ponte WSS)
+        run: |
+          node node-red/tests/ingestao-n2.test.js
+          node node-red/tests/spa-websocket.test.js
+          node node-red/tests/ponte-wss.test.js
+      - name: Export do agente local está atualizado
+        run: |
+          node tools/exportar-agente-local.js
+          git diff --exit-code packages/agente-local
+      - name: Nenhum segredo (arquivos + histórico)
+        run: node tools/verificar-segredos.js --historico

@@ -1,0 +1,62 @@
+asyncapi: '2.6.0'
+id: 'urn:smart40:planta-n2:grupo1:ponte-wss'
+info:
+  title: SMART 4.0 — Ponte borda-nuvem WSS (Grupo 1, Sprint 3)
+  version: '1.0.0-rc1'
+  description: |
+    Canal WebSocket seguro entre o Node-RED da bancada e o broker da unidade.
+    Status: CANDIDATO — aguardando revisão do G5 (contrato) e do G4 (consumo).
+    - Só wss://. Autenticação por token na query (?token=...); token inválido -> fechamento 4001.
+    - Telemetria a cada 500 ms, entrega "pelo menos uma vez": deduplicar por meta.msg_id.
+    - Comandos voltam pelo mesmo socket; o ack é publicado pelo agente no broker.
+servers:
+  broker-unidade1:
+    url: 'smart40-broker.onrender.com'
+    protocol: wss
+    description: Broker da unidade 1 (Render). Token na query string, nunca versionado.
+defaultContentType: application/json
+channels:
+  /:
+    publish:
+      operationId: enviarComando
+      summary: SPA / grupos enviam comandos ao agente da bancada.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/Comando'
+    subscribe:
+      operationId: receberDaBorda
+      summary: Clientes recebem a telemetria e os acks publicados pelo agente.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/Telemetria'
+          - $ref: '#/components/messages/Ack'
+components:
+  messages:
+    Telemetria:
+      name: envelope-telemetria-1.0
+      payload:
+        $ref: './envelope-ponte-wss.schema.json'
+    Comando:
+      name: comando
+      payload:
+        type: object
+        required: [acao, origem]
+        properties:
+          acao: { enum: [START, STOP, RESET, EMERGENCY_STOP] }
+          origem: { type: string, description: 'unidade1-grupo1..5; EMERGENCY_STOP é aceito de qualquer origem' }
+          id: { type: string, description: 'eco no ack para correlação' }
+    Ack:
+      name: ack
+      payload:
+        type: object
+        required: [tipo, acao, aceito, ts]
+        properties:
+          tipo: { const: ack }
+          acao: { type: string }
+          origem: { type: [string, 'null'] }
+          id: { type: [string, 'null'] }
+          aceito: { type: boolean }
+          motivo: { type: [string, 'null'] }
+          modo: { enum: [SIMULADOR, CLP, REPLAY, TESTE_B] }
+          destino: { enum: [SIMULADOR, CLP, NENHUM] }
+          ts: { type: string, format: date-time }

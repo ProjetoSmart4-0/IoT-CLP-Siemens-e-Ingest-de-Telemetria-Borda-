@@ -1,14 +1,89 @@
 # Grupo 1 — IoT, CLP Siemens & Ingestão de Telemetria (Borda)
 
-Planta N2 / SMART 4.0. Este repositório tem a **Sprint 2** (abaixo) e a Sprint 1 (mais para baixo, sem mudanças).
+Planta N2 / SMART 4.0. Este repositório tem a **Sprint 3** (abaixo), a Sprint 2 e a Sprint 1 (referência).
 
 ```
-CLP S7-1200 ──S7 100 ms──► Node-RED ──agrega 500 ms──► outbox SQLite ──MQTTS 8883 / TLS 1.3──► HiveMQ Cloud
-(Estoque .10)              flow_ingestao_n2.json       outbox_telemetry   (envio garantido)        │
-                                                                                                  ▼
-                                               Neon Postgres ◄── telemetry_logs ── iot-service (Cloud Run)
-S7-1500 Montagem ──OPC UA 4840──► gateway-python (opcional, mesmo padrão de outbox)
+CLP S7-1200 ──S7 100 ms──► Node-RED (notebook da bancada 192.168.150.200)
+                             │  aba Ingestão: normaliza + agrega 500 ms ──► outbox MQTT ──MQTTS 8883──► HiveMQ ──► iot-service ──► Neon
+                             │  aba Ponte WSS: envelope 500 ms ──► outbox_telemetry (SQLite) ──wss://──► smart40-broker ──► SPA (G4, Vercel)
+                             └◄─ comandos START/STOP/RESET/EMERGENCY_STOP ◄── broker ◄── SPA
+                                 validarComando (whitelist) ──► simulador | s7 out DB1,X0.4..X0.7 (só com autorização escrita)
 ```
+
+## Sprint 3 — ponte borda-nuvem (Semanas 6 a 8)
+
+Roteiro: estabilizar e homologar a ponte borda-nuvem com telemetria a cada 500 ms, store-and-forward com SQLite e
+canal de comandos seguro e auditável, para o Portão 3 (G4).
+
+| Entregável do roteiro | Arquivo | Status |
+|---|---|---|
+| 12. Fluxo consolidado de ingestão | `node-red/flow_ingestao_n2.json` (3 abas) | Pronto · testado |
+| 13. flows.json versionado + README de reconfiguração | `packages/agente-local/` | Pronto |
+| 14. Script SQL da outbox | `db/outbox_telemetry.sql` | Pronto |
+| 15. Log dos testes A/B/C | `docs/evidence/sprint3/log_testes_ponte_g1.md` (gerado por `tools/teste-ponte-g1.js`) | Ensaio local PASS · **bancada a executar** |
+| 16. Relatório de resiliência/replay | `docs/evidence/sprint3/G1-S3-relatorio-resiliencia.md` | Ensaio local PASS · **bancada a executar** |
+| 17. Ata das janelas com o G4 | `docs/evidence/sprint3/G1-S3-ata-janelas-G4.md` | Modelo pronto · reunião pendente |
+
+Situação de cada critério: `docs/evidence/sprint3/README.md`. Decisões: `docs/decisions/G1-decisoes-sprint3.md`.
+Contrato do envelope (para o G5): `contracts/events/envelope-ponte-wss.schema.json` e `asyncapi-ponte-wss-grupo1.yaml`.
+
+### O que mudou no fluxo
+
+- **Aba "Ponte borda-nuvem WSS" (nova).** A cada 500 ms monta o envelope do contrato (`timestamp` UTC, `roboUR`,
+  `esteira`, `estacoes`, `pedidoAtual`) + bloco `meta` (msg_id, seq, stale, buffered), grava na `outbox_telemetry`
+  e envia para `wss://smart40-broker.onrender.com`. Reconexão a cada 5000 ms; ao voltar, reenvia em ordem.
+  URL e token vêm de **variáveis de ambiente** (`SMART40_BROKER_URL`, `SMART40_AGENT_TOKEN`); o `settings.js`
+  impede o Node-RED de subir com `ws://`, com URL da Vercel ou com token na URL.
+  Diagnóstico: `GET /edge/ponte` e `GET /edge/comandos`. Injects "TESTE: derrubar/restaurar link".
+- **Aba "Comandos e SPA local".** Comandos chegam do broker ou do painel local; `validarComando` aceita só
+  `unidade1-grupo1..5` (rejeição em `node.warn`); `EMERGENCY_STOP` bypassa a whitelist. Ack volta pelo mesmo canal.
+  Com `INPUT_MODE=CLP`, escreve pulso em `DB1,X0.4` (START), `X0.5` (STOP), `X0.6` (RESET), `X0.7` (EMERGÊNCIA)
+  **somente** com `CLP_WRITE_AUTHORIZED=true` e `CLP_WRITE_AUTH_REF` apontando para a autorização assinada.
+  Todo comando fica na tabela `audit_comandos`.
+- **Aba "Ingestão".** Novo `INPUT_MODE=TESTE_B` com o payload sintético do roteiro no lugar do `s7 in`.
+
+### Rodar
+
+Node.js **22.13+**. Variáveis em `.env.example` (copie para `.env`, que não vai para o Git).
+Instalação na bancada: `packages/agente-local/README.md`.
+
+```bat
+:: testes automáticos (sem Node-RED, sem CLP, sem broker)
+node node-red\tests\ingestao-n2.test.js
+node node-red\tests\spa-websocket.test.js
+node node-red\tests\ponte-wss.test.js
+
+:: ensaio local: Node-RED real + broker wss de ensaio (certificado autoassinado), ~4 min
+cd tools && npm install && node ensaio-ponte-local.js
+
+:: testes na bancada contra o broker real (cada execução vai para o log de evidências)
+set SMART40_BROKER_URL=wss://smart40-broker.onrender.com
+set SMART40_TEST_TOKEN=<token de teste do G1>
+node tools\teste-ponte-g1.js A
+node tools\teste-ponte-g1.js C --duracao 60
+node tools\teste-ponte-g1.js resiliencia --duracao 300
+node tools\teste-ponte-g1.js comandos --confirmo-bancada-segura
+node tools\teste-ponte-g1.js continuidade --duracao 1800
+
+:: segredos (arquivos + histórico do Git)
+node tools\verificar-segredos.js --historico
+```
+
+Depois de mudar o fluxo: `node tools/exportar-agente-local.js` (atualiza `packages/agente-local`).
+
+### Pendências que dependem de outros (registradas como BLOCKED)
+
+1. Token do agente (G5) e token de teste do G1 para o broker real.
+2. Autorização escrita do responsável da automação para qualquer escrita no CLP.
+3. Confirmar no TIA Portal: IP do CLP de comandos (roteiro diz `.30`; o fluxo usa `.10`) e existência do `DB1,X0.4..X0.7`.
+4. Aprovação do bloco `meta` do envelope (G5) e janelas de teste com o G4.
+5. Pendências herdadas da Sprint 2: inventário de tags conferido, deploy do iot-service, replay com captura real.
+
+**Atenção:** `grupo1-iot/` é uma cópia antiga da Sprint 1 dentro do repositório. Recomendamos removê-la (não é usada).
+
+---
+
+# Sprint 2 (referência)
 
 ## Sprint 2 — entregáveis
 
@@ -37,14 +112,14 @@ Decisões e pendências: `docs/decisions/G1-decisoes-sprint2.md`.
 
 ### SPA WebSocket + painel de teste dos botões (PDF Grupo1-SPA-Nodered)
 
-- `node-red/flow_spa_websocket.json`: importe como segunda aba (Menu → Import). Os 4 trilhos do PDF, ligados à amostra
+- Na Sprint 3 esta aba foi incorporada ao `flow_ingestao_n2.json` (aba "Comandos e SPA local"); não importe arquivo separado. Os 4 trilhos do PDF, ligados à amostra
   normalizada do fluxo de ingestão por nós *link* (não há segundo `s7 in`). WebSocket em `ws://localhost:1880/ws`.
 - Comandos aceitos: `START`, `STOP`, `RESET`, `EMERGENCY_STOP` (`{acao, origem, id, token?}`). Cada um recebe um `ack` só
   na sessão que enviou. Em `INPUT_MODE=SIMULADOR` o comando vai ao simulador; em `CLP`/`REPLAY` **nada é escrito**
   (projeto somente leitura) e o ack volta com `aceito=false`.
 - Variáveis de ambiente da aba (opcionais): `WS_TOKEN`, `ELIPSE_ENABLED=true`, `ELIPSE_URL`.
 - **Painel de teste:** abra `painel-teste/painel-teste-botoes.html` no navegador, clique em *Conectar ao Node-RED* e em
-  *Rodar teste completo*. Teste do fluxo sem Node-RED: `node node-red/tests/spa-websocket.test.js`.
+  *Rodar teste completo*. Teste: `node node-red/tests/spa-websocket.test.js`.
 
 ### Rodar no Windows (sem Docker)
 

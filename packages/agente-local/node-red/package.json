@@ -1,0 +1,8 @@
+{
+  "name": "agente-local-grupo1",
+  "private": true,
+  "description": "Dependências do Node-RED da bancada (reinstalar depois de importar o flows.json). Node.js >= 22.13.",
+  "dependencies": {
+    "node-red-contrib-s7": "3.1.3"
+  }
+}
